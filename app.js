@@ -1,45 +1,44 @@
-const STORAGE_KEY = "workout-sheet-prototype-v1";
+const STORAGE_KEY = "workout-sheet-prototype-v2";
+const OLD_STORAGE_KEY = "workout-sheet-prototype-v1";
 
 const DEFAULT_MACHINES = [
-  { id: "leg-press", name: "Leg Press", targetWeight: 180, setupNotes: "Seat comfortable, knees tracking straight." },
-  { id: "chest-press", name: "Chest Press", targetWeight: 70, setupNotes: "Seat so handles start around mid-chest." },
-  { id: "lat-pulldown", name: "Lat Pulldown", targetWeight: 80, setupNotes: "Thigh pad snug, pull toward upper chest." },
-  { id: "seated-row", name: "Seated Row", targetWeight: 75, setupNotes: "Chest tall, no leaning back." },
-  { id: "shoulder-press", name: "Shoulder Press", targetWeight: 45, setupNotes: "Seat so handles start around ear height." },
-  { id: "leg-curl", name: "Leg Curl", targetWeight: 65, setupNotes: "Knee aligned with pivot point." },
-  { id: "leg-extension", name: "Leg Extension", targetWeight: 70, setupNotes: "Pad just above ankle, controlled tempo." }
+  { id: "leg-press", name: "Leg Press", group: "Legs", seedWeight: 180, setupNotes: "Seat comfortable, knees tracking straight." },
+  { id: "leg-curl", name: "Leg Curl", group: "Legs", seedWeight: 65, setupNotes: "Knee aligned with pivot point." },
+  { id: "leg-extension", name: "Leg Extension", group: "Legs", seedWeight: 70, setupNotes: "Pad just above ankle, controlled tempo." },
+  { id: "chest-press", name: "Chest Press", group: "Upper body", seedWeight: 70, setupNotes: "Seat so handles start around mid-chest." },
+  { id: "lat-pulldown", name: "Lat Pulldown", group: "Upper body", seedWeight: 80, setupNotes: "Thigh pad snug, pull toward upper chest." },
+  { id: "seated-row", name: "Seated Row", group: "Upper body", seedWeight: 75, setupNotes: "Chest tall, no leaning back." },
+  { id: "shoulder-press", name: "Shoulder Press", group: "Upper body", seedWeight: 45, setupNotes: "Seat so handles start around ear height." }
 ];
 
 const state = {
   machines: DEFAULT_MACHINES.map((machine) => ({ ...machine })),
   logs: [],
+  expandedId: "",
   settings: {
     backendUrl: window.WORKOUT_CONFIG?.defaultBackendUrl || "",
     profileName: "Tal",
-    autoSync: window.WORKOUT_CONFIG?.autoSync ?? false,
+    autoSync: window.WORKOUT_CONFIG?.autoSync ?? true,
     reduceMotion: false
   }
 };
 
 const els = {
-  machines: document.querySelector("[data-machines]"),
-  logs: document.querySelector("[data-logs]"),
-  setsToday: document.querySelector("[data-sets-today]"),
-  syncTitle: document.querySelector("[data-sync-title]"),
-  syncDetail: document.querySelector("[data-sync-detail]"),
-  backendUrl: document.querySelector("[data-backend-url]"),
+  tableHead: document.querySelector("[data-table-head]"),
+  machineTable: document.querySelector("[data-machine-table]"),
+  syncNote: document.querySelector("[data-sync-note]"),
+  sheetLink: document.querySelector("[data-sheet-link]"),
   profileName: document.querySelector("[data-profile-name]"),
   autoSync: document.querySelector("[data-auto-sync]"),
   reduceMotion: document.querySelector("[data-reduce-motion]"),
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
-  settingsModal: document.querySelector("[data-settings-modal]"),
-  machineTemplate: document.querySelector("[data-machine-template]")
+  settingsModal: document.querySelector("[data-settings-modal]")
 };
 
 function loadState() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    if (Array.isArray(saved.machines) && saved.machines.length) state.machines = saved.machines;
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY) || "{}");
+    if (Array.isArray(saved.machines) && saved.machines.length) state.machines = mergeMachines(saved.machines);
     if (Array.isArray(saved.logs)) state.logs = saved.logs;
     Object.assign(state.settings, saved.settings || {});
     if (!state.settings.backendUrl && window.WORKOUT_CONFIG?.defaultBackendUrl) {
@@ -57,84 +56,175 @@ function saveState() {
 
 function render() {
   document.body.classList.toggle("reduce-motion", state.settings.reduceMotion);
-  renderSyncStatus();
-  renderMachines();
-  renderLogs();
+  if (window.WORKOUT_CONFIG?.sheetUrl) els.sheetLink.href = window.WORKOUT_CONFIG.sheetUrl;
   renderSettings();
-}
-
-function renderSyncStatus() {
-  const enabled = Boolean(state.settings.backendUrl);
-  els.syncTitle.textContent = enabled ? "Google Sheet connected" : "Local mode";
-  els.syncDetail.textContent = enabled
-    ? "Machine targets and set logs can sync with your Sheet."
-    : "Saved on this browser. Paste a Google Apps Script URL in settings to sync with a Sheet.";
+  renderMachineTable();
 }
 
 function renderSettings() {
-  els.backendUrl.value = state.settings.backendUrl || "";
   els.profileName.value = state.settings.profileName || "";
   els.autoSync.checked = Boolean(state.settings.autoSync);
   els.reduceMotion.checked = Boolean(state.settings.reduceMotion);
 }
 
-function renderMachines() {
-  els.machines.innerHTML = "";
-  state.machines.forEach((machine, index) => {
-    const node = els.machineTemplate.content.firstElementChild.cloneNode(true);
-    node.dataset.machineId = machine.id;
-    node.querySelector(".machine-number").textContent = `Machine ${index + 1}`;
-    node.querySelector("h2").textContent = machine.name;
-    node.querySelector("[data-target-weight]").value = machine.targetWeight ?? "";
-    node.querySelector("[data-log-weight]").value = machine.targetWeight ?? "";
-    node.querySelector("[data-setup-notes]").value = machine.setupNotes || "";
-    els.machines.appendChild(node);
+function renderMachineTable() {
+  const dates = displayDates();
+  els.tableHead.innerHTML = `
+    <tr>
+      <th scope="col" class="machine-col">Machine</th>
+      ${dates.map((date, index) => `<th scope="col">${escapeHtml(formatDateLabel(date, index === dates.length - 1))}</th>`).join("")}
+    </tr>
+  `;
+
+  let lastGroup = "";
+  const rows = [];
+  orderedMachines().forEach((machine) => {
+    if (machine.group !== lastGroup) {
+      lastGroup = machine.group;
+      rows.push(`<tr class="group-row"><th colspan="${dates.length + 1}">${escapeHtml(lastGroup)}</th></tr>`);
+    }
+    rows.push(machineRow(machine, dates));
+    if (state.expandedId === machine.id) rows.push(detailRow(machine, dates.length + 1));
   });
+  els.machineTable.innerHTML = rows.join("");
 }
 
-function renderLogs() {
+function orderedMachines() {
+  const order = new Map(DEFAULT_MACHINES.map((machine, index) => [machine.id, index]));
+  return state.machines.slice().sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+}
+
+function machineRow(machine, dates) {
   const today = isoDate(new Date());
-  const todaysLogs = state.logs.filter((log) => log.date === today);
-  els.setsToday.textContent = todaysLogs.length;
-
-  if (!state.logs.length) {
-    els.logs.innerHTML = `<p>No logs yet. Try logging one set.</p>`;
-    return;
-  }
-
-  els.logs.innerHTML = state.logs
-    .slice()
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-    .slice(0, 18)
-    .map((log) => {
-      const effort = log.effort ? ` · effort ${escapeHtml(log.effort)}` : "";
-      const rir = log.rir ? ` · ${escapeHtml(log.rir)} left` : "";
-      const reps = log.reps ? ` x ${escapeHtml(log.reps)}` : "";
-      const note = log.note ? `<span>${escapeHtml(log.note)}</span>` : "";
-      return `
-        <article class="log-row">
-          <div>
-            <strong>${escapeHtml(log.machineName)}</strong>
-            <span>${escapeHtml(log.date)} · <em>${escapeHtml(log.weight || "")} lb${reps}</em>${effort}${rir}</span>
-            ${note}
-          </div>
-          <button type="button" data-delete-log="${escapeHtml(log.id)}">Delete</button>
-        </article>
-      `;
-    })
-    .join("");
+  return `
+    <tr class="machine-row ${state.expandedId === machine.id ? "is-open" : ""}" data-machine-row="${escapeHtml(machine.id)}">
+      <th scope="row">
+        <button type="button" class="machine-name" data-expand="${escapeHtml(machine.id)}" aria-expanded="${state.expandedId === machine.id}">
+          <span>${escapeHtml(machine.name)}</span>
+          <small>${escapeHtml(machine.setupNotes || "Add setup notes")}</small>
+        </button>
+      </th>
+      ${dates.map((date) => {
+        const log = latestLogFor(machine.id, date);
+        if (date === today) {
+          const previous = previousWeight(machine.id, today) || machine.seedWeight || machine.targetWeight || "";
+          const content = log?.weight
+            ? `<button type="button" class="edit-pill" data-expand="${escapeHtml(machine.id)}">${escapeHtml(log.weight)}</button>`
+            : `<button type="button" class="check-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous weight">✓</button>`;
+          return `<td class="today-cell">${content}<span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
+        }
+        return `<td>${log?.weight ? `<span class="weight-chip">${escapeHtml(log.weight)}</span>` : `<span class="empty-cell">-</span>`}</td>`;
+      }).join("")}
+    </tr>
+  `;
 }
 
-function saveMachine(card) {
-  const machine = machineFromCard(card);
-  state.machines = state.machines.map((item) => item.id === machine.id ? { ...item, ...machine } : item);
+function detailRow(machine, colspan) {
+  const today = isoDate(new Date());
+  const todayLog = latestLogFor(machine.id, today);
+  const previous = previousWeight(machine.id, today) || machine.seedWeight || machine.targetWeight || "";
+  return `
+    <tr class="detail-row">
+      <td colspan="${colspan}">
+        <div class="detail-panel" data-detail-panel="${escapeHtml(machine.id)}">
+          <label>
+            <span>Setup notes</span>
+            <textarea data-setup-notes rows="3">${escapeHtml(machine.setupNotes || "")}</textarea>
+          </label>
+          <div class="detail-grid">
+            <label>
+              <span>Today's weight</span>
+              <input data-today-weight type="number" min="0" step="5" inputmode="decimal" value="${escapeHtml(todayLog?.weight || previous || "")}">
+            </label>
+            <label>
+              <span>Today's note</span>
+              <input data-today-note type="text" value="${escapeHtml(todayLog?.note || "")}" placeholder="Felt smooth, seat tweak, etc.">
+            </label>
+          </div>
+          <div class="detail-actions">
+            <button type="button" class="primary" data-save-detail="${escapeHtml(machine.id)}">Save</button>
+            <button type="button" data-close-detail>Close</button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function displayDates() {
+  const today = isoDate(new Date());
+  const unique = Array.from(new Set(state.logs.map((log) => normalizeDate(log.date)).filter(Boolean)))
+    .filter((date) => date !== today)
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, 4)
+    .reverse();
+  return [...unique, today];
+}
+
+function latestLogFor(machineId, date) {
+  const normalizedDate = normalizeDate(date);
+  return state.logs
+    .filter((log) => log.machineId === machineId && normalizeDate(log.date) === normalizedDate && String(log.weight || "").trim())
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))[0];
+}
+
+function previousWeight(machineId, beforeDate) {
+  const normalizedBefore = normalizeDate(beforeDate);
+  const log = state.logs
+    .filter((item) => item.machineId === machineId && normalizeDate(item.date) !== normalizedBefore && String(item.weight || "").trim())
+    .sort((a, b) => {
+      const dateCompare = String(normalizeDate(b.date) || "").localeCompare(String(normalizeDate(a.date) || ""));
+      if (dateCompare) return dateCompare;
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    })[0];
+  return log?.weight || "";
+}
+
+function formatDateLabel(date, isTodayColumn = false) {
+  const normalized = normalizeDate(date);
+  if (!normalized) return "";
+  if (isTodayColumn) return "Today";
+  const parts = normalized.split("-");
+  return `${Number(parts[1])}/${Number(parts[2])}`;
+}
+
+function toggleMachine(machineId) {
+  state.expandedId = state.expandedId === machineId ? "" : machineId;
   saveState();
   render();
-  syncMachine(machine);
 }
 
-function logSet(card) {
-  const machine = machineFromCard(card);
+function quickRepeat(machineId) {
+  const machine = state.machines.find((item) => item.id === machineId);
+  if (!machine) return;
+  const weight = previousWeight(machineId, isoDate(new Date())) || machine.seedWeight || machine.targetWeight || "";
+  if (!weight) {
+    state.expandedId = machineId;
+    saveState();
+    render();
+    return;
+  }
+  appendTodayLog(machine, { weight, note: "" });
+}
+
+function saveDetail(machineId) {
+  const machine = state.machines.find((item) => item.id === machineId);
+  const panel = document.querySelector(`[data-detail-panel="${CSS.escape(machineId)}"]`);
+  if (!machine || !panel) return;
+
+  const setupNotes = panel.querySelector("[data-setup-notes]").value.trim();
+  const weight = panel.querySelector("[data-today-weight]").value.trim();
+  const note = panel.querySelector("[data-today-note]").value.trim();
+  const updatedMachine = { ...machine, setupNotes };
+
+  state.machines = state.machines.map((item) => item.id === machineId ? updatedMachine : item);
+  if (weight) appendTodayLog(updatedMachine, { weight, note }, { renderAfter: false });
+  saveState();
+  render();
+  syncMachine(updatedMachine);
+}
+
+function appendTodayLog(machine, values, options = {}) {
   const log = {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
     date: isoDate(new Date()),
@@ -142,46 +232,24 @@ function logSet(card) {
     profileName: state.settings.profileName || "",
     machineId: machine.id,
     machineName: machine.name,
-    weight: card.querySelector("[data-log-weight]").value.trim(),
-    reps: card.querySelector("[data-reps]").value.trim(),
-    effort: card.querySelector("[data-effort]").value,
-    rir: card.querySelector("[data-rir]").value,
-    note: card.querySelector("[data-log-note]").value.trim()
+    weight: values.weight || "",
+    reps: "",
+    effort: "",
+    rir: "",
+    note: values.note || ""
   };
-
-  state.machines = state.machines.map((item) => item.id === machine.id ? { ...item, ...machine } : item);
   state.logs.push(log);
   saveState();
-  card.querySelector("[data-reps]").value = "";
-  card.querySelector("[data-effort]").value = "";
-  card.querySelector("[data-rir]").value = "";
-  card.querySelector("[data-log-note]").value = "";
-  render();
-  syncMachine(machine);
+  if (options.renderAfter !== false) render();
   syncLog(log);
-}
-
-function machineFromCard(card) {
-  const original = state.machines.find((machine) => machine.id === card.dataset.machineId);
-  return {
-    ...original,
-    targetWeight: card.querySelector("[data-target-weight]").value.trim(),
-    setupNotes: card.querySelector("[data-setup-notes]").value.trim()
-  };
-}
-
-function deleteLog(id) {
-  state.logs = state.logs.filter((log) => log.id !== id);
-  saveState();
-  render();
 }
 
 async function syncNow() {
   if (!state.settings.backendUrl) {
-    openSettings();
+    setSyncNote("Saved locally");
     return;
   }
-  setSyncDetail("Syncing...");
+  setSyncNote("Syncing...");
   try {
     const response = await backendRequest("snapshot");
     if (response && response.ok) {
@@ -193,29 +261,29 @@ async function syncNow() {
       }
       saveState();
       render();
-      setSyncDetail("Synced with your Google Sheet.");
+      setSyncNote("Synced");
     } else {
-      setSyncDetail("The Sheet responded, but not with the expected data.");
+      setSyncNote("Sync issue");
     }
   } catch (error) {
     console.warn(error);
-    setSyncDetail("Could not sync. Check the Apps Script URL and deployment permissions.");
+    setSyncNote("Offline");
   }
 }
 
 function syncMachine(machine) {
   if (!state.settings.backendUrl) return;
-  backendRequest("saveMachine", { machine }).catch((error) => {
+  backendRequest("saveMachine", { machine }).then(() => setSyncNote("Synced")).catch((error) => {
     console.warn(error);
-    setSyncDetail("Saved locally, but the Sheet sync failed.");
+    setSyncNote("Saved locally");
   });
 }
 
 function syncLog(log) {
   if (!state.settings.backendUrl) return;
-  backendRequest("logSet", { log }).catch((error) => {
+  backendRequest("logSet", { log }).then(() => setSyncNote("Synced")).catch((error) => {
     console.warn(error);
-    setSyncDetail("Logged locally, but the Sheet sync failed.");
+    setSyncNote("Saved locally");
   });
 }
 
@@ -255,9 +323,17 @@ function backendRequest(action, payload = {}) {
 }
 
 function mergeMachines(incoming) {
-  const byId = new Map(state.machines.map((machine) => [machine.id, machine]));
+  const byId = new Map(DEFAULT_MACHINES.map((machine) => [machine.id, { ...machine }]));
+  state.machines.forEach((machine) => byId.set(machine.id, { ...(byId.get(machine.id) || {}), ...machine }));
   incoming.forEach((machine) => {
-    byId.set(machine.id, { ...(byId.get(machine.id) || {}), ...machine });
+    if (!machine.id) return;
+    const fallback = byId.get(machine.id) || {};
+    byId.set(machine.id, {
+      ...fallback,
+      ...machine,
+      group: fallback.group || machine.group || "Upper body",
+      seedWeight: fallback.seedWeight || machine.targetWeight || machine.seedWeight || ""
+    });
   });
   return DEFAULT_MACHINES.map((machine) => ({ ...machine, ...(byId.get(machine.id) || {}) }));
 }
@@ -265,13 +341,13 @@ function mergeMachines(incoming) {
 function mergeLogs(incoming) {
   const byId = new Map(state.logs.map((log) => [log.id, log]));
   incoming.forEach((log) => {
-    if (log.id) byId.set(log.id, log);
+    if (log.id) byId.set(log.id, { ...log, date: normalizeDate(log.date) });
   });
   return Array.from(byId.values());
 }
 
-function setSyncDetail(message) {
-  els.syncDetail.textContent = message;
+function setSyncNote(message) {
+  els.syncNote.textContent = message;
 }
 
 function openSettings() {
@@ -287,29 +363,33 @@ function closeSettings() {
 }
 
 function saveSettings() {
-  state.settings.backendUrl = els.backendUrl.value.trim();
   state.settings.profileName = els.profileName.value.trim() || "Tal";
   state.settings.autoSync = els.autoSync.checked;
   state.settings.reduceMotion = els.reduceMotion.checked;
   saveState();
   closeSettings();
   render();
-  if (state.settings.backendUrl) syncNow();
+  if (state.settings.autoSync) syncNow();
 }
 
 function resetSite() {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(OLD_STORAGE_KEY);
   window.location.reload();
-}
-
-function clearLocal() {
-  state.logs = [];
-  saveState();
-  render();
 }
 
 function isoDate(date) {
   return date.toISOString().slice(0, 10);
+}
+
+function normalizeDate(value) {
+  if (!value) return "";
+  if (value instanceof Date) return isoDate(value);
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) return isoDate(parsed);
+  return text;
 }
 
 function escapeHtml(value) {
@@ -325,20 +405,40 @@ function bindEvents() {
   document.querySelector("[data-close-settings]").addEventListener("click", closeSettings);
   document.querySelector("[data-save-settings]").addEventListener("click", saveSettings);
   document.querySelector("[data-reset-site]").addEventListener("click", resetSite);
-  document.querySelector("[data-sync-now]").addEventListener("click", syncNow);
-  document.querySelector("[data-clear-local]").addEventListener("click", clearLocal);
   els.settingsBackdrop.addEventListener("click", closeSettings);
 
-  els.machines.addEventListener("click", (event) => {
-    const card = event.target.closest(".machine-card");
-    if (!card) return;
-    if (event.target.matches("[data-save-machine]")) saveMachine(card);
-    if (event.target.matches("[data-log-set]")) logSet(card);
-  });
+  els.machineTable.addEventListener("click", (event) => {
+    const repeatButton = event.target.closest("[data-repeat-weight]");
+    if (repeatButton) {
+      event.stopPropagation();
+      quickRepeat(repeatButton.dataset.repeatWeight);
+      return;
+    }
 
-  els.logs.addEventListener("click", (event) => {
-    const id = event.target.dataset.deleteLog;
-    if (id) deleteLog(id);
+    const saveButton = event.target.closest("[data-save-detail]");
+    if (saveButton) {
+      event.stopPropagation();
+      saveDetail(saveButton.dataset.saveDetail);
+      return;
+    }
+
+    if (event.target.closest("[data-close-detail]")) {
+      event.stopPropagation();
+      state.expandedId = "";
+      saveState();
+      render();
+      return;
+    }
+
+    const expandButton = event.target.closest("[data-expand]");
+    if (expandButton) {
+      event.stopPropagation();
+      toggleMachine(expandButton.dataset.expand);
+      return;
+    }
+
+    const row = event.target.closest("[data-machine-row]");
+    if (row) toggleMachine(row.dataset.machineRow);
   });
 }
 
@@ -346,7 +446,7 @@ function init() {
   loadState();
   bindEvents();
   render();
-  if (state.settings.autoSync && state.settings.backendUrl) syncNow();
+  if (state.settings.autoSync) syncNow();
 }
 
 init();

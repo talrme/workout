@@ -21,14 +21,15 @@ GitHub repo: https://github.com/talrme/workout
 
 ## Product Behavior
 
-The app tracks:
+The app shows:
 
-- Seven workout machines
-- Target weight per machine
-- Seat/setup notes
-- Set logs with date, weight, reps, optional effort, optional reps left in reserve, and notes
+- Seven workout machines grouped into legs and upper body
+- A compact table with recent dates as columns
+- The latest logged weight per machine/date
+- A checkmark in today's column that repeats the previous logged weight
+- Accordion details per machine for setup notes, today's weight, and today's note
 
-Target effort copy is based around RPE 7, or about three reps left in the tank.
+The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs.
 
 ## Backend Model
 
@@ -36,6 +37,13 @@ Target effort copy is based around RPE 7, or about three reps left in the tank.
 - `backend.sample.gs` exposes `doGet`.
 - Static app uses JSONP by adding a `<script>` tag with `action`, `callback`, and optional JSON `payload`.
 - Supported actions: `snapshot`, `saveMachine`, `logSet`.
+
+Current table behavior reuses the existing backend without requiring a new Apps Script deployment:
+
+- `Machines.setupNotes` stores static machine setup/seat notes.
+- `Logs.weight` stores the displayed weight.
+- `Logs.note` stores the note for that machine/date.
+- The frontend treats the latest log row for a machine/date as the current value, so editing today's value appends a new row rather than mutating the old one.
 
 The website talks to:
 
@@ -55,6 +63,7 @@ The current permanent default backend is stored in `config.js`:
 ```js
 window.WORKOUT_CONFIG = {
   defaultBackendUrl: ".../exec",
+  sheetUrl: "...",
   autoSync: true
 };
 ```
@@ -85,6 +94,8 @@ window.WORKOUT_CONFIG = {
 - `rir`
 - `note`
 
+The source Google Sheet link is stored in `config.js` as `sheetUrl` and shown in the site footer.
+
 ## Setup Flow To Preserve In README
 
 The human README should explain:
@@ -98,7 +109,7 @@ The human README should explain:
 7. Use `Who has access: Anyone`.
 8. Authorize permissions.
 9. Copy the `/exec` Web app URL.
-10. Paste that URL into the workout site settings.
+10. Put that URL in `config.js` as `defaultBackendUrl`.
 
 If the URL should be permanent for fresh browsers, update `config.js` too.
 

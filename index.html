@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>workout sheet</title>
+  <title>Workout</title>
   <meta name="theme-color" content="#f4f7ef">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -11,61 +11,31 @@
 <body>
   <main class="app-shell">
     <header class="hero">
-      <div>
-        <p class="eyebrow">Sheet-backed prototype</p>
-        <h1>workout</h1>
-        <p>Track target weights, machine setup notes, and quick set logs.</p>
-      </div>
-      <button type="button" class="settings-button" data-open-settings aria-label="Open sync settings" title="Sync settings">
-        <span aria-hidden="true"></span>
+      <h1>Workout</h1>
+      <button type="button" class="settings-button" data-open-settings aria-label="Open settings" title="Settings">
+        <span class="settings-glyph" aria-hidden="true"></span>
       </button>
     </header>
 
-    <section class="status-card">
-      <div>
-        <p class="eyebrow">Backend</p>
-        <h2 data-sync-title>Local mode</h2>
-        <p data-sync-detail>Saved on this browser. Paste a Google Apps Script URL in settings to sync with a Sheet.</p>
-      </div>
-      <button type="button" data-sync-now>Sync</button>
-    </section>
-
-    <section class="today-card">
-      <div>
-        <p class="eyebrow">Target effort</p>
-        <h2>RPE 7-ish</h2>
-        <p>Roughly three reps left in the tank. Log effort only when it feels useful.</p>
-      </div>
-      <div class="today-stat">
-        <span>Sets today</span>
-        <strong data-sets-today>0</strong>
-      </div>
-    </section>
-
-    <section class="machine-grid" data-machines aria-label="workout machines"></section>
-
-    <section class="log-card">
-      <div class="section-heading">
+    <section class="machine-panel" aria-label="Workout machines">
+      <div class="panel-heading">
         <div>
-          <p class="eyebrow">Recent logs</p>
-          <h2>History</h2>
+          <p class="eyebrow">Machines</p>
+          <h2>Recent weights</h2>
         </div>
-        <button type="button" data-clear-local>Clear local</button>
+        <p data-sync-note>Loading sheet...</p>
       </div>
-      <div class="logs" data-logs></div>
+      <div class="table-scroll">
+        <table class="machine-table">
+          <thead data-table-head></thead>
+          <tbody data-machine-table></tbody>
+        </table>
+      </div>
     </section>
 
-    <section class="setup-card">
-      <p class="eyebrow">What you need from me</p>
-      <h2>One Google Apps Script URL</h2>
-      <ol>
-        <li>Create a Google Sheet called something like <strong>workout backend</strong>.</li>
-        <li>Go to <strong>Extensions -> Apps Script</strong>.</li>
-        <li>Paste in <code>backend.sample.gs</code> from this folder.</li>
-        <li>Deploy it as a web app: execute as you, access for anyone.</li>
-        <li>Paste the web app URL into this site's settings.</li>
-      </ol>
-    </section>
+    <footer class="sheet-footer">
+      <a data-sheet-link href="https://docs.google.com/spreadsheets/d/1iOg845q_IxXqVDmVxSjuRTdEVA19JaLvECDnTK-BL3Y/edit?gid=868528902#gid=868528902" target="_blank" rel="noreferrer">Google Sheet</a>
+    </footer>
   </main>
 
   <div class="modal-backdrop" data-settings-backdrop hidden></div>
@@ -73,21 +43,17 @@
     <div class="settings-panel">
       <header>
         <div>
-          <p class="eyebrow">workout</p>
-          <h2 id="settings-title">Sync settings</h2>
+          <p class="eyebrow">Workout</p>
+          <h2 id="settings-title">Settings</h2>
         </div>
         <button type="button" data-close-settings aria-label="Close settings">x</button>
       </header>
       <label>
-        <span>Google Apps Script URL</span>
-        <input data-backend-url type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
-      </label>
-      <label>
-        <span>Profile name</span>
+        <span>Name</span>
         <input data-profile-name type="text" autocomplete="name" placeholder="Tal">
       </label>
       <label class="toggle-row">
-        <span>Auto-sync on open</span>
+        <span>Sync on open</span>
         <input type="checkbox" data-auto-sync>
       </label>
       <label class="toggle-row">
@@ -96,71 +62,10 @@
       </label>
       <div class="settings-actions">
         <button type="button" class="primary" data-save-settings>Save</button>
-        <button type="button" data-reset-site>Reset this phone</button>
+        <button type="button" data-reset-site>Reset local</button>
       </div>
     </div>
   </section>
-
-  <template data-machine-template>
-    <article class="machine-card">
-      <header>
-        <div>
-          <p class="machine-number"></p>
-          <h2></h2>
-        </div>
-        <button type="button" class="mini-button" data-save-machine>Save</button>
-      </header>
-      <div class="field-row">
-        <label>
-          <span>Target weight</span>
-          <input data-target-weight type="number" min="0" step="5" inputmode="decimal">
-        </label>
-        <label>
-          <span>Log weight</span>
-          <input data-log-weight type="number" min="0" step="5" inputmode="decimal">
-        </label>
-      </div>
-      <label>
-        <span>Seat / setup notes</span>
-        <textarea data-setup-notes rows="3" placeholder="Seat 4, handles high, pin position..."></textarea>
-      </label>
-      <div class="field-row compact">
-        <label>
-          <span>Reps</span>
-          <input data-reps type="number" min="0" step="1" inputmode="numeric" placeholder="10">
-        </label>
-        <label>
-          <span>Effort</span>
-          <select data-effort>
-            <option value="">Optional</option>
-            <option value="5">5 easy</option>
-            <option value="6">6 moderate</option>
-            <option value="7">7 target</option>
-            <option value="8">8 hard</option>
-            <option value="9">9 very hard</option>
-            <option value="10">10 max</option>
-          </select>
-        </label>
-        <label>
-          <span>Left</span>
-          <select data-rir>
-            <option value="">Optional</option>
-            <option value="5">5+</option>
-            <option value="4">4</option>
-            <option value="3">3 target</option>
-            <option value="2">2</option>
-            <option value="1">1</option>
-            <option value="0">0</option>
-          </select>
-        </label>
-      </div>
-      <label>
-        <span>Set note</span>
-        <input data-log-note type="text" placeholder="Felt smooth, too heavy, knee weird...">
-      </label>
-      <button type="button" class="primary log-button" data-log-set>Log set</button>
-    </article>
-  </template>
 
   <script src="config.js"></script>
   <script src="app.js"></script>

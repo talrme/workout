@@ -6,19 +6,21 @@ A tiny static app that uses a Google Sheet as a very simple backend.
 
 It works in two modes:
 
-- Local mode: saves machine targets and logs in this browser.
+- Local mode: saves machine setup notes and logs in this browser.
 - Google Sheet mode: uses a deployed Google Apps Script URL to read/write a Sheet.
 
-This copy has a default Apps Script backend saved in `config.js`, so a fresh browser should already know which Sheet backend to use. You can still override that URL in the site settings on a specific browser.
+This copy has a default Apps Script backend saved in `config.js`, so a fresh browser should already know which Sheet backend to use. The app UI intentionally hides the backend setup details and links directly to the source Google Sheet in the footer.
 
-## What The App Tracks
+## What The App Shows
 
-- Seven machines
-- Target weight for each machine
-- Seat/setup notes
-- Set logs with date, weight, reps, optional effort, optional reps left in reserve, and notes
+- Seven machines, grouped into legs and upper body
+- A compact table of recent workout dates
+- One row per machine
+- Recent weights for each machine/date
+- A checkmark for quickly logging today's set at the previous weight
+- Expandable machine details for setup notes, today's weight, and today's note
 
-The target effort is roughly RPE 7, or about three reps left in the tank. You can log effort/RIR only when you care.
+The current UI keeps logging intentionally simple: weight plus an optional note. The backend can still accept older fields like reps, effort, and reps in reserve, but the website no longer shows them.
 
 ## Big Picture
 
@@ -94,24 +96,27 @@ Copy the `Web app URL`. It usually ends in `/exec`.
 
 Use the `/exec` URL, not a `/dev` test URL.
 
-## Step 7: Paste It Into The workout site
+## Step 7: Connect The workout Site
 
-1. Open the workout website.
-2. Click the settings button in the top-right.
-3. Paste the Apps Script URL into `Google Apps Script URL`, or confirm the default URL from `config.js` is already filled in.
-4. Put your profile name, like `Tal`.
-5. Click `Save`.
+This site now keeps backend details out of the page UI. For the live copy, the default Apps Script URL is already stored in `config.js`.
+
+If you create a new backend later:
+
+1. Open `config.js`.
+2. Replace `defaultBackendUrl` with the new `/exec` Web app URL.
+3. Update `sheetUrl` if the source Google Sheet changed.
+4. Commit and push the site.
 
 The app should then sync with the Google Sheet.
 
 ## What Happens After That
 
-When you click `Sync`, `Save`, or `Log set`, the website calls your Apps Script URL.
+When you save setup notes or log today's weight, the website calls your Apps Script URL.
 
 The script creates/updates:
 
-- `Machines`: target weights and setup notes
-- `Logs`: dated workout logs
+- `Machines`: machine setup notes, plus older compatibility fields the site can still read
+- `Logs`: dated workout logs. The table uses the latest log row for each machine/date.
 
 ## If You Later Change The Script
 

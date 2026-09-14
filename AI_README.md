@@ -27,7 +27,7 @@ The app shows:
 - A compact table with recent dates as columns
 - Dates render newest-to-oldest, with `Today` as the first date column so phone users see the action column immediately
 - The latest logged weight per machine/date
-- Date header completion counts such as `5/8`, so partial workouts are visible
+- Date headers show a subtle day/date pair, such as `Today` over `9/14`, rather than completion counts
 - A soft checkmark in today's column that repeats the previous logged weight
 - A green checked weight after today's set is logged; clicking it opens the editor
 - Logged values include a small clear button that appends the normal deletion marker and toggles that machine off for today
@@ -35,6 +35,7 @@ The app shows:
 - Accordion details per machine for setup notes, today's weight, today's note, and deleting today's entry
 - Date headers open a whole-day editor for all machine weights/notes on that date
 - A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
+- A bottom `Add workout` row creates custom rows with a section, value label, default value, and setup notes
 - Local-only sample history for the previous six days to make a fresh browser feel populated
 - `workout-icon.png` plus `manifest.webmanifest` provide the phone/home-screen icon
 
@@ -58,8 +59,8 @@ Current table behavior reuses the existing backend without requiring a new Apps 
 - Whole-day edits use `appendLogForDate`, which writes the same log shape as today's quick log but with the selected date.
 - Whole-day delete appends one deletion marker per default machine for that date.
 - When editing/deleting a day that contains only `_demo` sample logs, the new rows are also marked `_demo` so sample tinkering stays local.
-- `completionForDate` counts visible latest logs across all default rows, including plank, and renders the day-header count.
 - The `hideTodayNotes` setting lives only in localStorage and does not require backend support.
+- Custom workouts are preserved in localStorage. The current Apps Script `Machines` shape can store their id/name/default value/setup notes, but not section/group or value label unless the backend is expanded.
 
 The website talks to:
 

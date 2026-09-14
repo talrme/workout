@@ -95,6 +95,53 @@
     </div>
   </section>
 
+  <div class="modal-backdrop" data-workout-backdrop hidden></div>
+  <section class="workout-modal" data-workout-modal hidden role="dialog" aria-modal="true" aria-labelledby="workout-title">
+    <div class="workout-panel">
+      <header>
+        <div>
+          <p class="eyebrow">New row</p>
+          <h2 id="workout-title">Add workout</h2>
+        </div>
+        <button type="button" data-close-workout aria-label="Close add workout">x</button>
+      </header>
+      <div class="workout-fields">
+        <label>
+          <span>Name</span>
+          <input data-workout-name type="text" placeholder="Calf Raise">
+        </label>
+        <label>
+          <span>Section</span>
+          <select data-workout-group>
+            <option>Legs</option>
+            <option>Upper body</option>
+            <option>Core</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>
+          <span>Value label</span>
+          <select data-workout-value-label>
+            <option>Weight</option>
+            <option>Time</option>
+          </select>
+        </label>
+        <label>
+          <span>Default value</span>
+          <input data-workout-default type="text" placeholder="50">
+        </label>
+      </div>
+      <label>
+        <span>Setup notes</span>
+        <textarea data-workout-setup rows="3" placeholder="Seat, form, or reminder"></textarea>
+      </label>
+      <div class="workout-actions">
+        <button type="button" class="primary" data-save-workout>Save workout</button>
+        <button type="button" data-cancel-workout>Cancel</button>
+      </div>
+    </div>
+  </section>
+
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>

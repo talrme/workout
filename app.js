@@ -4,6 +4,7 @@ const HISTORY_COLUMNS = 5;
 const DEMO_DAYS = 6;
 const DEMO_LOG_PREFIX = "demo-week-";
 const DELETE_MARKER = "__WORKOUT_DELETE__";
+const GROUP_ORDER = ["Legs", "Upper body", "Core", "Other"];
 
 const DEFAULT_MACHINES = [
   { id: "leg-press", name: "Leg Press", group: "Legs", seedWeight: 180, setupNotes: "Seat comfortable, knees tracking straight." },
@@ -48,7 +49,14 @@ const els = {
   dateModal: document.querySelector("[data-date-modal]"),
   dateTitle: document.querySelector("[data-date-title]"),
   editDate: document.querySelector("[data-edit-date]"),
-  dayMachineList: document.querySelector("[data-day-machine-list]")
+  dayMachineList: document.querySelector("[data-day-machine-list]"),
+  workoutBackdrop: document.querySelector("[data-workout-backdrop]"),
+  workoutModal: document.querySelector("[data-workout-modal]"),
+  workoutName: document.querySelector("[data-workout-name]"),
+  workoutGroup: document.querySelector("[data-workout-group]"),
+  workoutValueLabel: document.querySelector("[data-workout-value-label]"),
+  workoutDefault: document.querySelector("[data-workout-default]"),
+  workoutSetup: document.querySelector("[data-workout-setup]")
 };
 
 function loadState() {
@@ -94,10 +102,10 @@ function renderMachineTable() {
       <th scope="col" class="machine-col">Machine</th>
       ${dates.map((date) => `
         <th scope="col" class="date-col">
-          <div class="date-head ${completionClass(date)}">
+          <div class="date-head">
             <button type="button" data-open-date="${escapeHtml(date)}">
-              <span>${escapeHtml(formatDateLabel(date, date === today))}</span>
-              <small>${escapeHtml(completionText(date))}</small>
+              <span>${escapeHtml(formatDayLabel(date, date === today))}</span>
+              <small>${escapeHtml(formatDateLabel(date))}</small>
             </button>
             ${date === today ? `<button type="button" class="add-day-button" data-add-day aria-label="Add another day">+</button>` : ""}
           </div>
@@ -116,6 +124,7 @@ function renderMachineTable() {
     rows.push(machineRow(machine, dates));
     if (state.expandedId === machine.id) rows.push(detailRow(machine, dates.length + 1));
   });
+  rows.push(addWorkoutRow(dates.length + 1));
   els.machineTable.innerHTML = rows.join("");
 }
 
@@ -128,7 +137,18 @@ function updateTableWidth(dateCount = displayDates().length) {
 
 function orderedMachines() {
   const order = new Map(DEFAULT_MACHINES.map((machine, index) => [machine.id, index]));
-  return state.machines.slice().sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+  return state.machines.slice().sort((a, b) => {
+    const groupCompare = groupRank(a.group) - groupRank(b.group);
+    if (groupCompare) return groupCompare;
+    const orderCompare = (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999);
+    if (orderCompare) return orderCompare;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+}
+
+function groupRank(group) {
+  const index = GROUP_ORDER.indexOf(group || "Other");
+  return index === -1 ? GROUP_ORDER.length : index;
 }
 
 function machineRow(machine, dates) {
@@ -160,6 +180,19 @@ function todayNoteHtml(log) {
   const note = String(log?.note || "").trim();
   if (state.settings.hideTodayNotes || !note || note === DELETE_MARKER) return "";
   return `<small class="today-note" title="${escapeHtml(note)}">${escapeHtml(note)}</small>`;
+}
+
+function addWorkoutRow(colspan) {
+  return `
+    <tr class="add-workout-row">
+      <td colspan="${colspan}">
+        <button type="button" class="add-workout-button" data-open-workout>
+          <span aria-hidden="true">+</span>
+          <strong>Add workout</strong>
+        </button>
+      </td>
+    </tr>
+  `;
 }
 
 function detailRow(machine, colspan) {
@@ -224,24 +257,6 @@ function dateHasVisibleLog(date) {
   return orderedMachines().some((machine) => latestLogFor(machine.id, date));
 }
 
-function completionForDate(date) {
-  const total = orderedMachines().length;
-  const done = orderedMachines().filter((machine) => latestLogFor(machine.id, date)).length;
-  return { done, total };
-}
-
-function completionText(date) {
-  const { done, total } = completionForDate(date);
-  return `${done}/${total}`;
-}
-
-function completionClass(date) {
-  const { done, total } = completionForDate(date);
-  if (done === 0) return "is-empty-day";
-  if (done === total) return "is-complete-day";
-  return "is-partial-day";
-}
-
 function previousWeight(machineId, beforeDate) {
   const normalizedBefore = normalizeDate(beforeDate);
   const dates = Array.from(new Set(state.logs
@@ -256,10 +271,18 @@ function previousWeight(machineId, beforeDate) {
   return "";
 }
 
-function formatDateLabel(date, isTodayColumn = false) {
+function formatDayLabel(date, isTodayColumn = false) {
+  if (isTodayColumn) return "Today";
   const normalized = normalizeDate(date);
   if (!normalized) return "";
-  if (isTodayColumn) return "Today";
+  const [year, month, day] = normalized.split("-").map(Number);
+  const localDate = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(localDate);
+}
+
+function formatDateLabel(date) {
+  const normalized = normalizeDate(date);
+  if (!normalized) return "";
   const parts = normalized.split("-");
   return `${Number(parts[1])}/${Number(parts[2])}`;
 }
@@ -327,6 +350,63 @@ function deleteToday(machineId) {
   const todayLog = latestLogFor(machineId, isoDate(new Date()));
   if (!machine || !todayLog) return;
   appendTodayLog(machine, { weight: "", note: DELETE_MARKER, deleted: true });
+}
+
+function openWorkoutModal() {
+  els.workoutName.value = "";
+  els.workoutGroup.value = "Legs";
+  els.workoutValueLabel.value = "Weight";
+  els.workoutDefault.value = "";
+  els.workoutSetup.value = "";
+  els.workoutBackdrop.hidden = false;
+  els.workoutModal.hidden = false;
+  document.body.classList.add("is-modal-open");
+  window.setTimeout(() => els.workoutName.focus(), 0);
+}
+
+function closeWorkoutModal() {
+  els.workoutBackdrop.hidden = true;
+  els.workoutModal.hidden = true;
+  document.body.classList.remove("is-modal-open");
+}
+
+function saveWorkoutModal() {
+  const name = els.workoutName.value.trim();
+  if (!name) {
+    els.workoutName.focus();
+    return;
+  }
+  const defaultValueText = els.workoutDefault.value.trim();
+  const machine = {
+    id: uniqueMachineId(name),
+    name,
+    group: els.workoutGroup.value || "Other",
+    valueLabel: els.workoutValueLabel.value === "Time" ? "Time" : "Weight",
+    seedWeight: defaultValueText,
+    targetWeight: defaultValueText,
+    setupNotes: els.workoutSetup.value.trim(),
+    custom: true
+  };
+
+  state.machines.push(machine);
+  state.expandedId = machine.id;
+  saveState();
+  closeWorkoutModal();
+  render();
+  syncMachine(machine);
+}
+
+function uniqueMachineId(name) {
+  const slug = String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 32) || "workout";
+  const used = new Set(state.machines.map((machine) => machine.id));
+  if (!used.has(`custom-${slug}`)) return `custom-${slug}`;
+  let suffix = 2;
+  while (used.has(`custom-${slug}-${suffix}`)) suffix += 1;
+  return `custom-${slug}-${suffix}`;
 }
 
 function appendTodayLog(machine, values, options = {}) {
@@ -520,14 +600,25 @@ function mergeMachines(incoming) {
   incoming.forEach((machine) => {
     if (!machine.id) return;
     const fallback = byId.get(machine.id) || {};
+    const defaultMachine = DEFAULT_MACHINES.some((item) => item.id === machine.id);
     byId.set(machine.id, {
       ...fallback,
       ...machine,
-      group: fallback.group || machine.group || "Upper body",
+      group: fallback.group || machine.group || (defaultMachine ? "Upper body" : "Other"),
       seedWeight: fallback.seedWeight || machine.targetWeight || machine.seedWeight || ""
     });
   });
-  return DEFAULT_MACHINES.map((machine) => ({ ...machine, ...(byId.get(machine.id) || {}) }));
+  const defaultIds = new Set(DEFAULT_MACHINES.map((machine) => machine.id));
+  const defaults = DEFAULT_MACHINES.map((machine) => ({ ...machine, ...(byId.get(machine.id) || {}) }));
+  const custom = Array.from(byId.values())
+    .filter((machine) => machine.id && !defaultIds.has(machine.id))
+    .map((machine) => ({
+      ...machine,
+      group: machine.group || "Other",
+      valueLabel: machine.valueLabel || "Weight",
+      seedWeight: machine.seedWeight || machine.targetWeight || ""
+    }));
+  return [...defaults, ...custom];
 }
 
 function mergeLogs(incoming) {
@@ -676,7 +767,11 @@ function bindEvents() {
   document.querySelector("[data-cancel-date]").addEventListener("click", closeDateModal);
   document.querySelector("[data-save-date]").addEventListener("click", saveDateModal);
   document.querySelector("[data-delete-date]").addEventListener("click", deleteDateModal);
+  document.querySelector("[data-close-workout]").addEventListener("click", closeWorkoutModal);
+  document.querySelector("[data-cancel-workout]").addEventListener("click", closeWorkoutModal);
+  document.querySelector("[data-save-workout]").addEventListener("click", saveWorkoutModal);
   els.dateBackdrop.addEventListener("click", closeDateModal);
+  els.workoutBackdrop.addEventListener("click", closeWorkoutModal);
   els.editDate.addEventListener("change", renderDateModal);
   window.addEventListener("resize", () => updateTableWidth());
 
@@ -697,6 +792,12 @@ function bindEvents() {
   });
 
   els.machineTable.addEventListener("click", (event) => {
+    if (event.target.closest("[data-open-workout]")) {
+      event.stopPropagation();
+      openWorkoutModal();
+      return;
+    }
+
     const repeatButton = event.target.closest("[data-repeat-weight]");
     if (repeatButton) {
       event.stopPropagation();

@@ -15,6 +15,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 
 - Seven machines plus planks, grouped into legs, upper body, and core
 - A compact table of recent workout dates
+- Dates displayed newest-to-oldest, with `Today` first for easier phone use
 - One row per machine
 - Recent weights for each machine/date
 - Date headers with completion counts like `5/8`, so skipped exercises are visible

@@ -25,6 +25,7 @@ The app shows:
 
 - Seven workout machines plus planks, grouped into legs, upper body, and core
 - A compact table with recent dates as columns
+- Dates render newest-to-oldest, with `Today` as the first date column so phone users see the action column immediately
 - The latest logged weight per machine/date
 - Date header completion counts such as `5/8`, so partial workouts are visible
 - A soft checkmark in today's column that repeats the previous logged weight

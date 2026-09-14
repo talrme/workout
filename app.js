@@ -83,17 +83,18 @@ function renderSettings() {
 
 function renderMachineTable() {
   const dates = displayDates();
+  const today = isoDate(new Date());
   els.tableHead.innerHTML = `
     <tr>
       <th scope="col" class="machine-col">Machine</th>
-      ${dates.map((date, index) => `
+      ${dates.map((date) => `
         <th scope="col" class="date-col">
           <div class="date-head ${completionClass(date)}">
             <button type="button" data-open-date="${escapeHtml(date)}">
-              <span>${escapeHtml(formatDateLabel(date, index === dates.length - 1))}</span>
+              <span>${escapeHtml(formatDateLabel(date, date === today))}</span>
               <small>${escapeHtml(completionText(date))}</small>
             </button>
-            ${index === dates.length - 1 ? `<button type="button" class="add-day-button" data-add-day aria-label="Add another day">+</button>` : ""}
+            ${date === today ? `<button type="button" class="add-day-button" data-add-day aria-label="Add another day">+</button>` : ""}
           </div>
         </th>
       `).join("")}
@@ -184,9 +185,8 @@ function displayDates() {
     .filter((date) => date && dateHasVisibleLog(date))))
     .filter((date) => date !== today)
     .sort((a, b) => b.localeCompare(a))
-    .slice(0, HISTORY_COLUMNS - 1)
-    .reverse();
-  return [...unique, today];
+    .slice(0, HISTORY_COLUMNS - 1);
+  return [today, ...unique];
 }
 
 function latestLogFor(machineId, date) {

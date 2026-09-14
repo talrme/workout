@@ -1,5 +1,9 @@
 const STORAGE_KEY = "workout-sheet-prototype-v2";
 const OLD_STORAGE_KEY = "workout-sheet-prototype-v1";
+const HISTORY_COLUMNS = 5;
+const DEMO_DAYS = 6;
+const DEMO_LOG_PREFIX = "demo-week-";
+const DELETE_MARKER = "__WORKOUT_DELETE__";
 
 const DEFAULT_MACHINES = [
   { id: "leg-press", name: "Leg Press", group: "Legs", seedWeight: 180, setupNotes: "Seat comfortable, knees tracking straight." },
@@ -32,7 +36,9 @@ const els = {
   autoSync: document.querySelector("[data-auto-sync]"),
   reduceMotion: document.querySelector("[data-reduce-motion]"),
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
-  settingsModal: document.querySelector("[data-settings-modal]")
+  settingsModal: document.querySelector("[data-settings-modal]"),
+  populateSample: document.querySelector("[data-populate-sample]"),
+  clearSample: document.querySelector("[data-clear-sample]")
 };
 
 function loadState() {
@@ -48,6 +54,7 @@ function loadState() {
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
+  if (!state.logs.length) state.logs = createDemoLogs();
 }
 
 function saveState() {
@@ -108,10 +115,10 @@ function machineRow(machine, dates) {
         const log = latestLogFor(machine.id, date);
         if (date === today) {
           const previous = previousWeight(machine.id, today) || machine.seedWeight || machine.targetWeight || "";
-          const content = log?.weight
-            ? `<button type="button" class="edit-pill" data-expand="${escapeHtml(machine.id)}">${escapeHtml(log.weight)}</button>`
-            : `<button type="button" class="check-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous weight">✓</button>`;
-          return `<td class="today-cell">${content}<span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
+          if (log?.weight) {
+            return `<td class="today-cell"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} weight"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button></td>`;
+          }
+          return `<td class="today-cell"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous weight">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }
         return `<td>${log?.weight ? `<span class="weight-chip">${escapeHtml(log.weight)}</span>` : `<span class="empty-cell">-</span>`}</td>`;
       }).join("")}
@@ -143,6 +150,7 @@ function detailRow(machine, colspan) {
           </div>
           <div class="detail-actions">
             <button type="button" class="primary" data-save-detail="${escapeHtml(machine.id)}">Save</button>
+            ${todayLog ? `<button type="button" class="danger" data-delete-today="${escapeHtml(machine.id)}">Delete today</button>` : ""}
             <button type="button" data-close-detail>Close</button>
           </div>
         </div>
@@ -153,31 +161,46 @@ function detailRow(machine, colspan) {
 
 function displayDates() {
   const today = isoDate(new Date());
-  const unique = Array.from(new Set(state.logs.map((log) => normalizeDate(log.date)).filter(Boolean)))
+  const unique = Array.from(new Set(state.logs
+    .filter((log) => String(log.weight || "").trim())
+    .map((log) => normalizeDate(log.date))
+    .filter((date) => date && dateHasVisibleLog(date))))
     .filter((date) => date !== today)
     .sort((a, b) => b.localeCompare(a))
-    .slice(0, 4)
+    .slice(0, HISTORY_COLUMNS - 1)
     .reverse();
   return [...unique, today];
 }
 
 function latestLogFor(machineId, date) {
+  const latest = latestEventFor(machineId, date);
+  if (!latest || isDeleteMarker(latest) || !String(latest.weight || "").trim()) return null;
+  return latest;
+}
+
+function latestEventFor(machineId, date) {
   const normalizedDate = normalizeDate(date);
   return state.logs
-    .filter((log) => log.machineId === machineId && normalizeDate(log.date) === normalizedDate && String(log.weight || "").trim())
+    .filter((log) => log.machineId === machineId && normalizeDate(log.date) === normalizedDate)
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))[0];
+}
+
+function dateHasVisibleLog(date) {
+  return orderedMachines().some((machine) => latestLogFor(machine.id, date));
 }
 
 function previousWeight(machineId, beforeDate) {
   const normalizedBefore = normalizeDate(beforeDate);
-  const log = state.logs
-    .filter((item) => item.machineId === machineId && normalizeDate(item.date) !== normalizedBefore && String(item.weight || "").trim())
-    .sort((a, b) => {
-      const dateCompare = String(normalizeDate(b.date) || "").localeCompare(String(normalizeDate(a.date) || ""));
-      if (dateCompare) return dateCompare;
-      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
-    })[0];
-  return log?.weight || "";
+  const dates = Array.from(new Set(state.logs
+    .filter((item) => item.machineId === machineId && normalizeDate(item.date) !== normalizedBefore)
+    .map((item) => normalizeDate(item.date))
+    .filter(Boolean)))
+    .sort((a, b) => b.localeCompare(a));
+  for (const date of dates) {
+    const log = latestLogFor(machineId, date);
+    if (log?.weight) return log.weight;
+  }
+  return "";
 }
 
 function formatDateLabel(date, isTodayColumn = false) {
@@ -224,6 +247,13 @@ function saveDetail(machineId) {
   syncMachine(updatedMachine);
 }
 
+function deleteToday(machineId) {
+  const machine = state.machines.find((item) => item.id === machineId);
+  const todayLog = latestLogFor(machineId, isoDate(new Date()));
+  if (!machine || !todayLog) return;
+  appendTodayLog(machine, { weight: "", note: DELETE_MARKER, deleted: true });
+}
+
 function appendTodayLog(machine, values, options = {}) {
   const log = {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
@@ -236,7 +266,8 @@ function appendTodayLog(machine, values, options = {}) {
     reps: "",
     effort: "",
     rir: "",
-    note: values.note || ""
+    note: values.deleted ? DELETE_MARKER : values.note || "",
+    deleted: Boolean(values.deleted)
   };
   state.logs.push(log);
   saveState();
@@ -280,6 +311,7 @@ function syncMachine(machine) {
 }
 
 function syncLog(log) {
+  if (log._demo) return;
   if (!state.settings.backendUrl) return;
   backendRequest("logSet", { log }).then(() => setSyncNote("Synced")).catch((error) => {
     console.warn(error);
@@ -346,6 +378,53 @@ function mergeLogs(incoming) {
   return Array.from(byId.values());
 }
 
+function createDemoLogs() {
+  const today = new Date();
+  return DEFAULT_MACHINES.flatMap((machine, machineIndex) => {
+    return Array.from({ length: DEMO_DAYS }, (_, dayIndex) => {
+      const daysAgo = DEMO_DAYS - dayIndex;
+      const date = addDays(today, -daysAgo);
+      const weightBump = Math.max(0, dayIndex - 2) * 5 + (machineIndex % 2 ? 0 : 5);
+      const skipped = (machineIndex + dayIndex) % 7 === 0;
+      if (skipped) return null;
+      const dateText = isoDate(date);
+      return {
+        id: `${DEMO_LOG_PREFIX}${machine.id}-${dateText}`,
+        date: dateText,
+        createdAt: `${dateText}T12:00:00.000Z`,
+        profileName: "Sample",
+        machineId: machine.id,
+        machineName: machine.name,
+        weight: String(Number(machine.seedWeight || 0) + weightBump),
+        reps: "",
+        effort: "",
+        rir: "",
+        note: "",
+        _demo: true
+      };
+    }).filter(Boolean);
+  });
+}
+
+function populateSampleData() {
+  state.logs = state.logs.filter((log) => !log._demo);
+  state.logs.push(...createDemoLogs());
+  saveState();
+  render();
+  setSyncNote("Sample data");
+}
+
+function clearSampleData() {
+  state.logs = state.logs.filter((log) => !log._demo);
+  saveState();
+  render();
+  setSyncNote(state.logs.length ? "Synced" : "No history");
+}
+
+function isDeleteMarker(log) {
+  return Boolean(log?.deleted) || log?.note === DELETE_MARKER;
+}
+
 function setSyncNote(message) {
   els.syncNote.textContent = message;
 }
@@ -379,7 +458,16 @@ function resetSite() {
 }
 
 function isoDate(date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 function normalizeDate(value) {
@@ -405,6 +493,8 @@ function bindEvents() {
   document.querySelector("[data-close-settings]").addEventListener("click", closeSettings);
   document.querySelector("[data-save-settings]").addEventListener("click", saveSettings);
   document.querySelector("[data-reset-site]").addEventListener("click", resetSite);
+  els.populateSample.addEventListener("click", populateSampleData);
+  els.clearSample.addEventListener("click", clearSampleData);
   els.settingsBackdrop.addEventListener("click", closeSettings);
 
   els.machineTable.addEventListener("click", (event) => {
@@ -419,6 +509,13 @@ function bindEvents() {
     if (saveButton) {
       event.stopPropagation();
       saveDetail(saveButton.dataset.saveDetail);
+      return;
+    }
+
+    const deleteButton = event.target.closest("[data-delete-today]");
+    if (deleteButton) {
+      event.stopPropagation();
+      deleteToday(deleteButton.dataset.deleteToday);
       return;
     }
 

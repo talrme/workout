@@ -196,6 +196,9 @@ button { cursor: pointer; color: inherit; }
 }
 
 .group-row th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   padding: 9px 12px;
   background: var(--soft);
   color: var(--green);
@@ -248,7 +251,7 @@ button { cursor: pointer; color: inherit; }
 }
 
 .weight-chip,
-.edit-pill {
+.done-pill {
   display: inline-grid;
   place-items: center;
   min-width: 54px;
@@ -262,8 +265,17 @@ button { cursor: pointer; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-.edit-pill {
+.done-pill {
+  grid-auto-flow: column;
+  gap: 5px;
+  background: var(--green);
+  color: #fff;
   border-color: var(--ink);
+}
+
+.done-pill span {
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .empty-cell {
@@ -277,16 +289,21 @@ button { cursor: pointer; color: inherit; }
   gap: 3px;
 }
 
-.check-button {
+.same-button {
   width: 38px;
   min-height: 38px;
   border: 2px solid var(--ink);
   border-radius: 50%;
-  background: var(--green);
-  color: #fff;
+  background: #eef1e9;
+  color: var(--muted);
   font-size: 1.2rem;
   font-weight: 1000;
   line-height: 1;
+}
+
+.same-button:hover {
+  background: var(--lime);
+  color: var(--ink);
 }
 
 .ghost-weight {
@@ -372,10 +389,21 @@ button.primary {
   color: #fff;
 }
 
+.danger {
+  color: var(--red);
+  border-color: rgba(216, 74, 60, 0.45);
+  background: #fff7f4;
+}
+
+.danger:hover {
+  border-color: var(--red);
+}
+
 .detail-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 8px;
-  justify-content: end;
+  justify-content: stretch;
 }
 
 .sheet-footer {
@@ -442,10 +470,16 @@ button.primary {
   accent-color: var(--green);
 }
 
-.settings-actions {
+.settings-actions,
+.sample-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.sample-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
 }
 
 @media (max-width: 760px) {
@@ -489,10 +523,7 @@ button.primary {
     grid-template-columns: 1fr;
   }
 
-  .detail-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
+  .detail-actions { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 430px) {

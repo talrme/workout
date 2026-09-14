@@ -10,6 +10,8 @@
   --orange: #ee8c4a;
   --red: #d84a3c;
   --soft: #eef5e6;
+  --machine-col-width: 250px;
+  --date-col-width: 108px;
 }
 
 * { box-sizing: border-box; }
@@ -165,8 +167,7 @@ button { cursor: pointer; color: inherit; }
 }
 
 .machine-table {
-  width: 100%;
-  min-width: 720px;
+  width: max(100%, var(--table-target-width, 790px));
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -190,14 +191,14 @@ button { cursor: pointer; color: inherit; }
 }
 
 .machine-table .machine-col {
-  width: 250px;
+  width: var(--machine-col-width);
   left: 0;
   z-index: 3;
   text-align: left;
 }
 
 .date-col {
-  width: 108px;
+  width: var(--date-col-width);
 }
 
 .date-head {
@@ -380,6 +381,19 @@ button { cursor: pointer; color: inherit; }
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 850;
+}
+
+.today-note {
+  display: -webkit-box;
+  max-width: 96px;
+  overflow: hidden;
+  color: rgba(101, 112, 100, 0.82);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.12;
+  text-transform: none;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .detail-row td {
@@ -602,6 +616,11 @@ button.primary {
 }
 
 @media (max-width: 760px) {
+  :root {
+    --machine-col-width: 132px;
+    --date-col-width: 92px;
+  }
+
   .app-shell {
     width: min(100% - 18px, 560px);
     gap: 10px;
@@ -623,18 +642,6 @@ button.primary {
   .panel-heading {
     align-items: start;
     display: grid;
-  }
-
-  .machine-table {
-    min-width: 540px;
-  }
-
-  .machine-table .machine-col {
-    width: 132px;
-  }
-
-  .date-col {
-    width: 92px;
   }
 
   .machine-name small {
@@ -661,6 +668,12 @@ button.primary {
   .date-head .add-day-button {
     width: 25px;
     min-height: 25px;
+  }
+
+  .today-note {
+    max-width: 74px;
+    font-size: 0.62rem;
+    -webkit-line-clamp: 2;
   }
 
   .detail-grid,

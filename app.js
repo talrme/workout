@@ -25,18 +25,21 @@ const state = {
     backendUrl: window.WORKOUT_CONFIG?.defaultBackendUrl || "",
     profileName: "Tal",
     autoSync: window.WORKOUT_CONFIG?.autoSync ?? true,
-    reduceMotion: false
+    reduceMotion: false,
+    hideTodayNotes: false
   }
 };
 
 const els = {
   tableHead: document.querySelector("[data-table-head]"),
+  machineTableEl: document.querySelector(".machine-table"),
   machineTable: document.querySelector("[data-machine-table]"),
   syncNote: document.querySelector("[data-sync-note]"),
   sheetLink: document.querySelector("[data-sheet-link]"),
   profileName: document.querySelector("[data-profile-name]"),
   autoSync: document.querySelector("[data-auto-sync]"),
   reduceMotion: document.querySelector("[data-reduce-motion]"),
+  hideTodayNotes: document.querySelector("[data-hide-today-notes]"),
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
   settingsModal: document.querySelector("[data-settings-modal]"),
   populateSample: document.querySelector("[data-populate-sample]"),
@@ -79,11 +82,13 @@ function renderSettings() {
   els.profileName.value = state.settings.profileName || "";
   els.autoSync.checked = Boolean(state.settings.autoSync);
   els.reduceMotion.checked = Boolean(state.settings.reduceMotion);
+  els.hideTodayNotes.checked = Boolean(state.settings.hideTodayNotes);
 }
 
 function renderMachineTable() {
   const dates = displayDates();
   const today = isoDate(new Date());
+  updateTableWidth(dates.length);
   els.tableHead.innerHTML = `
     <tr>
       <th scope="col" class="machine-col">Machine</th>
@@ -114,6 +119,13 @@ function renderMachineTable() {
   els.machineTable.innerHTML = rows.join("");
 }
 
+function updateTableWidth(dateCount = displayDates().length) {
+  const compact = window.matchMedia("(max-width: 760px)").matches;
+  const machineWidth = compact ? 132 : 250;
+  const dateWidth = compact ? 92 : 108;
+  els.machineTableEl.style.setProperty("--table-target-width", `${machineWidth + (dateCount * dateWidth)}px`);
+}
+
 function orderedMachines() {
   const order = new Map(DEFAULT_MACHINES.map((machine, index) => [machine.id, index]));
   return state.machines.slice().sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
@@ -134,7 +146,7 @@ function machineRow(machine, dates) {
         if (date === today) {
           const previous = previousWeight(machine.id, today) || defaultValue(machine);
           if (log?.weight) {
-            return `<td class="today-cell"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button></td>`;
+            return `<td class="today-cell"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button>${todayNoteHtml(log)}</td>`;
           }
           return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }
@@ -142,6 +154,12 @@ function machineRow(machine, dates) {
       }).join("")}
     </tr>
   `;
+}
+
+function todayNoteHtml(log) {
+  const note = String(log?.note || "").trim();
+  if (state.settings.hideTodayNotes || !note || note === DELETE_MARKER) return "";
+  return `<small class="today-note" title="${escapeHtml(note)}">${escapeHtml(note)}</small>`;
 }
 
 function detailRow(machine, colspan) {
@@ -601,6 +619,7 @@ function saveSettings() {
   state.settings.profileName = els.profileName.value.trim() || "Tal";
   state.settings.autoSync = els.autoSync.checked;
   state.settings.reduceMotion = els.reduceMotion.checked;
+  state.settings.hideTodayNotes = els.hideTodayNotes.checked;
   saveState();
   closeSettings();
   render();
@@ -659,6 +678,7 @@ function bindEvents() {
   document.querySelector("[data-delete-date]").addEventListener("click", deleteDateModal);
   els.dateBackdrop.addEventListener("click", closeDateModal);
   els.editDate.addEventListener("change", renderDateModal);
+  window.addEventListener("resize", () => updateTableWidth());
 
   els.tableHead.addEventListener("click", (event) => {
     const openDateButton = event.target.closest("[data-open-date]");

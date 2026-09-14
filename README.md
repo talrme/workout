@@ -21,6 +21,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Date headers with completion counts like `5/8`, so skipped exercises are visible
 - A soft checkmark for quickly logging today's set at the previous weight
 - A green checked weight once today's set has been logged
+- Subtle today's notes under logged values, with a local setting to hide them from the table
 - Expandable machine details for setup notes, today's weight, today's note, and deleting today's entry
 - Clickable date headers for editing or deleting a whole workout day
 - A small plus button beside `Today` for adding a different date, such as yesterday

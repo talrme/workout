@@ -30,6 +30,7 @@ The app shows:
 - Date header completion counts such as `5/8`, so partial workouts are visible
 - A soft checkmark in today's column that repeats the previous logged weight
 - A green checked weight after today's set is logged; clicking it opens the editor
+- Subtle today's notes under logged values, controlled by the browser-local `hideTodayNotes` setting
 - Accordion details per machine for setup notes, today's weight, today's note, and deleting today's entry
 - Date headers open a whole-day editor for all machine weights/notes on that date
 - A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
@@ -57,6 +58,7 @@ Current table behavior reuses the existing backend without requiring a new Apps 
 - Whole-day delete appends one deletion marker per default machine for that date.
 - When editing/deleting a day that contains only `_demo` sample logs, the new rows are also marked `_demo` so sample tinkering stays local.
 - `completionForDate` counts visible latest logs across all default rows, including plank, and renders the day-header count.
+- The `hideTodayNotes` setting lives only in localStorage and does not require backend support.
 
 The website talks to:
 

@@ -13,10 +13,11 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 
 ## What The App Shows
 
-- Seven machines, grouped into legs and upper body
+- Seven machines plus planks, grouped into legs, upper body, and core
 - A compact table of recent workout dates
 - One row per machine
 - Recent weights for each machine/date
+- Date headers with completion counts like `5/8`, so skipped exercises are visible
 - A soft checkmark for quickly logging today's set at the previous weight
 - A green checked weight once today's set has been logged
 - Expandable machine details for setup notes, today's weight, today's note, and deleting today's entry
@@ -25,7 +26,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Optional local-only sample history for the previous six days, shown across the compact five-column table
 - A home-screen icon via `workout-icon.png` and `manifest.webmanifest`
 
-The current UI keeps logging intentionally simple: weight plus an optional note. The backend can still accept older fields like reps, effort, and reps in reserve, but the website no longer shows them.
+The current UI keeps logging intentionally simple: a value plus an optional note. For machines, that value is weight; for planks, it is time, like `30s`. The backend can still accept older fields like reps, effort, and reps in reserve, but the website no longer shows them.
 
 ## Big Picture
 

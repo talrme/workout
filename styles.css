@@ -215,12 +215,34 @@ button { cursor: pointer; color: inherit; }
   color: inherit;
   box-shadow: none;
   text-transform: uppercase;
+  display: grid;
+  gap: 1px;
+  place-items: center;
 }
 
 .date-head button:hover {
   background: rgba(207, 232, 137, 0.45);
   box-shadow: none;
   transform: none;
+}
+
+.date-head small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.date-head.is-complete-day small {
+  color: var(--green);
+}
+
+.date-head.is-partial-day small {
+  color: var(--orange);
+}
+
+.date-head.is-empty-day small {
+  color: #a5ab9e;
 }
 
 .date-head .add-day-button {
@@ -235,17 +257,22 @@ button { cursor: pointer; color: inherit; }
   line-height: 1;
 }
 
+.group-row th,
+.group-row td {
+  padding: 9px 12px;
+  background: var(--soft);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
 .group-row th {
   position: sticky;
   left: 0;
   z-index: 1;
-  padding: 9px 12px;
-  background: var(--soft);
   color: var(--green);
   text-align: left;
   text-transform: uppercase;
   font-size: 0.78rem;
-  border-top: 2px solid var(--ink);
 }
 
 .machine-row th {

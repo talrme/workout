@@ -12,7 +12,8 @@ const DEFAULT_MACHINES = [
   { id: "chest-press", name: "Chest Press", group: "Upper body", seedWeight: 70, setupNotes: "Seat so handles start around mid-chest." },
   { id: "lat-pulldown", name: "Lat Pulldown", group: "Upper body", seedWeight: 80, setupNotes: "Thigh pad snug, pull toward upper chest." },
   { id: "seated-row", name: "Seated Row", group: "Upper body", seedWeight: 75, setupNotes: "Chest tall, no leaning back." },
-  { id: "shoulder-press", name: "Shoulder Press", group: "Upper body", seedWeight: 45, setupNotes: "Seat so handles start around ear height." }
+  { id: "shoulder-press", name: "Shoulder Press", group: "Upper body", seedWeight: 45, setupNotes: "Seat so handles start around ear height." },
+  { id: "plank", name: "Plank", group: "Core", seedWeight: "30s", valueLabel: "Time", setupNotes: "Start with 30 seconds. Keep hips steady and breathe." }
 ];
 
 const state = {
@@ -87,8 +88,11 @@ function renderMachineTable() {
       <th scope="col" class="machine-col">Machine</th>
       ${dates.map((date, index) => `
         <th scope="col" class="date-col">
-          <div class="date-head">
-            <button type="button" data-open-date="${escapeHtml(date)}">${escapeHtml(formatDateLabel(date, index === dates.length - 1))}</button>
+          <div class="date-head ${completionClass(date)}">
+            <button type="button" data-open-date="${escapeHtml(date)}">
+              <span>${escapeHtml(formatDateLabel(date, index === dates.length - 1))}</span>
+              <small>${escapeHtml(completionText(date))}</small>
+            </button>
             ${index === dates.length - 1 ? `<button type="button" class="add-day-button" data-add-day aria-label="Add another day">+</button>` : ""}
           </div>
         </th>
@@ -101,7 +105,7 @@ function renderMachineTable() {
   orderedMachines().forEach((machine) => {
     if (machine.group !== lastGroup) {
       lastGroup = machine.group;
-      rows.push(`<tr class="group-row"><th colspan="${dates.length + 1}">${escapeHtml(lastGroup)}</th></tr>`);
+      rows.push(`<tr class="group-row"><th scope="row">${escapeHtml(lastGroup)}</th><td colspan="${dates.length}"></td></tr>`);
     }
     rows.push(machineRow(machine, dates));
     if (state.expandedId === machine.id) rows.push(detailRow(machine, dates.length + 1));
@@ -127,13 +131,13 @@ function machineRow(machine, dates) {
       ${dates.map((date) => {
         const log = latestLogFor(machine.id, date);
         if (date === today) {
-          const previous = previousWeight(machine.id, today) || machine.seedWeight || machine.targetWeight || "";
+          const previous = previousWeight(machine.id, today) || defaultValue(machine);
           if (log?.weight) {
-            return `<td class="today-cell"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} weight"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button></td>`;
+            return `<td class="today-cell"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button></td>`;
           }
-          return `<td class="today-cell"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous weight">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
+          return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }
-        return `<td>${log?.weight ? `<span class="weight-chip">${escapeHtml(log.weight)}</span>` : `<span class="empty-cell">-</span>`}</td>`;
+        return `<td class="${log?.weight ? "" : "is-missing"}">${log?.weight ? `<span class="weight-chip">${escapeHtml(log.weight)}</span>` : `<span class="empty-cell">-</span>`}</td>`;
       }).join("")}
     </tr>
   `;
@@ -142,15 +146,15 @@ function machineRow(machine, dates) {
 function detailRow(machine, colspan) {
   const today = isoDate(new Date());
   const todayLog = latestLogFor(machine.id, today);
-  const previous = previousWeight(machine.id, today) || machine.seedWeight || machine.targetWeight || "";
+  const previous = previousWeight(machine.id, today) || defaultValue(machine);
   return `
     <tr class="detail-row">
       <td colspan="${colspan}">
         <div class="detail-panel" data-detail-panel="${escapeHtml(machine.id)}">
           <div class="detail-grid">
             <label>
-              <span>Today's weight</span>
-              <input data-today-weight type="number" min="0" step="5" inputmode="decimal" value="${escapeHtml(todayLog?.weight || previous || "")}">
+              <span>Today's ${escapeHtml(valueLabel(machine).toLowerCase())}</span>
+              <input data-today-weight ${inputAttributes(machine)} value="${escapeHtml(todayLog?.weight || previous || "")}">
             </label>
             <label>
               <span>Today's note</span>
@@ -202,6 +206,24 @@ function dateHasVisibleLog(date) {
   return orderedMachines().some((machine) => latestLogFor(machine.id, date));
 }
 
+function completionForDate(date) {
+  const total = orderedMachines().length;
+  const done = orderedMachines().filter((machine) => latestLogFor(machine.id, date)).length;
+  return { done, total };
+}
+
+function completionText(date) {
+  const { done, total } = completionForDate(date);
+  return `${done}/${total}`;
+}
+
+function completionClass(date) {
+  const { done, total } = completionForDate(date);
+  if (done === 0) return "is-empty-day";
+  if (done === total) return "is-complete-day";
+  return "is-partial-day";
+}
+
 function previousWeight(machineId, beforeDate) {
   const normalizedBefore = normalizeDate(beforeDate);
   const dates = Array.from(new Set(state.logs
@@ -232,6 +254,19 @@ function formatLongDate(date) {
   return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(localDate);
 }
 
+function valueLabel(machine) {
+  return machine.valueLabel || "Weight";
+}
+
+function defaultValue(machine) {
+  return machine.seedWeight || machine.targetWeight || "";
+}
+
+function inputAttributes(machine) {
+  if (machine.valueLabel === "Time") return `type="text" inputmode="text" placeholder="30s"`;
+  return `type="number" min="0" step="5" inputmode="decimal"`;
+}
+
 function toggleMachine(machineId) {
   state.expandedId = state.expandedId === machineId ? "" : machineId;
   saveState();
@@ -241,7 +276,7 @@ function toggleMachine(machineId) {
 function quickRepeat(machineId) {
   const machine = state.machines.find((item) => item.id === machineId);
   if (!machine) return;
-  const weight = previousWeight(machineId, isoDate(new Date())) || machine.seedWeight || machine.targetWeight || "";
+  const weight = previousWeight(machineId, isoDate(new Date())) || defaultValue(machine);
   if (!weight) {
     state.expandedId = machineId;
     saveState();
@@ -325,8 +360,8 @@ function renderDateModal() {
         <h3>${escapeHtml(machine.name)}</h3>
         <div class="day-fields">
           <label>
-            <span>Weight</span>
-            <input data-day-weight type="number" min="0" step="5" inputmode="decimal" value="${escapeHtml(log?.weight || "")}">
+            <span>${escapeHtml(valueLabel(machine))}</span>
+            <input data-day-weight ${inputAttributes(machine)} value="${escapeHtml(log?.weight || "")}">
           </label>
           <label>
             <span>Note</span>
@@ -495,6 +530,7 @@ function createDemoLogs() {
       const skipped = (machineIndex + dayIndex) % 7 === 0;
       if (skipped) return null;
       const dateText = isoDate(date);
+      const weight = machine.id === "plank" ? `${30 + (dayIndex % 3) * 5}s` : String(Number(machine.seedWeight || 0) + weightBump);
       return {
         id: `${DEMO_LOG_PREFIX}${machine.id}-${dateText}`,
         date: dateText,
@@ -502,7 +538,7 @@ function createDemoLogs() {
         profileName: "Sample",
         machineId: machine.id,
         machineName: machine.name,
-        weight: String(Number(machine.seedWeight || 0) + weightBump),
+        weight,
         reps: "",
         effort: "",
         rir: "",

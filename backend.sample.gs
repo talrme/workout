@@ -8,7 +8,8 @@ const DEFAULT_MACHINES = [
   ['seated-row', 'Seated Row', 75, 'Chest tall, no leaning back.'],
   ['shoulder-press', 'Shoulder Press', 45, 'Seat so handles start around ear height.'],
   ['leg-curl', 'Leg Curl', 65, 'Knee aligned with pivot point.'],
-  ['leg-extension', 'Leg Extension', 70, 'Pad just above ankle, controlled tempo.']
+  ['leg-extension', 'Leg Extension', 70, 'Pad just above ankle, controlled tempo.'],
+  ['plank', 'Plank', '30s', 'Start with 30 seconds. Keep hips steady and breathe.']
 ];
 
 function doGet(e) {
@@ -138,4 +139,3 @@ function jsonp_(callback, data) {
     .createTextOutput(`${safeCallback}(${JSON.stringify(data)});`)
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
-

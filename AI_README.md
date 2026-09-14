@@ -23,9 +23,10 @@ GitHub repo: https://github.com/talrme/workout
 
 The app shows:
 
-- Seven workout machines grouped into legs and upper body
+- Seven workout machines plus planks, grouped into legs, upper body, and core
 - A compact table with recent dates as columns
 - The latest logged weight per machine/date
+- Date header completion counts such as `5/8`, so partial workouts are visible
 - A soft checkmark in today's column that repeats the previous logged weight
 - A green checked weight after today's set is logged; clicking it opens the editor
 - Accordion details per machine for setup notes, today's weight, today's note, and deleting today's entry
@@ -34,7 +35,7 @@ The app shows:
 - Local-only sample history for the previous six days to make a fresh browser feel populated
 - `workout-icon.png` plus `manifest.webmanifest` provide the phone/home-screen icon
 
-The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs.
+The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs. Plank duration is stored in the existing `weight` field as a display string such as `30s`, while the UI labels that row as `Time`.
 
 ## Backend Model
 
@@ -54,6 +55,7 @@ Current table behavior reuses the existing backend without requiring a new Apps 
 - Whole-day edits use `appendLogForDate`, which writes the same log shape as today's quick log but with the selected date.
 - Whole-day delete appends one deletion marker per default machine for that date.
 - When editing/deleting a day that contains only `_demo` sample logs, the new rows are also marked `_demo` so sample tinkering stays local.
+- `completionForDate` counts visible latest logs across all default rows, including plank, and renders the day-header count.
 
 The website talks to:
 

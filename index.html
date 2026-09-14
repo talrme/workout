@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Workout</title>
   <meta name="theme-color" content="#f4f7ef">
+  <meta name="apple-mobile-web-app-title" content="Workout">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="workout-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -67,6 +70,29 @@
       <div class="settings-actions">
         <button type="button" class="primary" data-save-settings>Save</button>
         <button type="button" data-reset-site>Reset local</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" data-date-backdrop hidden></div>
+  <section class="date-modal" data-date-modal hidden role="dialog" aria-modal="true" aria-labelledby="date-title">
+    <div class="date-panel">
+      <header>
+        <div>
+          <p class="eyebrow">Workout day</p>
+          <h2 id="date-title" data-date-title>Edit day</h2>
+        </div>
+        <button type="button" data-close-date aria-label="Close date editor">x</button>
+      </header>
+      <label class="date-field">
+        <span>Date</span>
+        <input data-edit-date type="date">
+      </label>
+      <div class="day-machine-list" data-day-machine-list></div>
+      <div class="date-actions">
+        <button type="button" class="primary" data-save-date>Save day</button>
+        <button type="button" class="danger" data-delete-date>Delete day</button>
+        <button type="button" data-cancel-date>Cancel</button>
       </div>
     </div>
   </section>

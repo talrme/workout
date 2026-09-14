@@ -1,0 +1,16 @@
+{
+  "name": "Workout",
+  "short_name": "Workout",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f4f7ef",
+  "theme_color": "#f4f7ef",
+  "icons": [
+    {
+      "src": "workout-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

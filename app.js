@@ -19,6 +19,7 @@ const state = {
   machines: DEFAULT_MACHINES.map((machine) => ({ ...machine })),
   logs: [],
   expandedId: "",
+  editingDate: "",
   settings: {
     backendUrl: window.WORKOUT_CONFIG?.defaultBackendUrl || "",
     profileName: "Tal",
@@ -38,7 +39,12 @@ const els = {
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
   settingsModal: document.querySelector("[data-settings-modal]"),
   populateSample: document.querySelector("[data-populate-sample]"),
-  clearSample: document.querySelector("[data-clear-sample]")
+  clearSample: document.querySelector("[data-clear-sample]"),
+  dateBackdrop: document.querySelector("[data-date-backdrop]"),
+  dateModal: document.querySelector("[data-date-modal]"),
+  dateTitle: document.querySelector("[data-date-title]"),
+  editDate: document.querySelector("[data-edit-date]"),
+  dayMachineList: document.querySelector("[data-day-machine-list]")
 };
 
 function loadState() {
@@ -79,7 +85,14 @@ function renderMachineTable() {
   els.tableHead.innerHTML = `
     <tr>
       <th scope="col" class="machine-col">Machine</th>
-      ${dates.map((date, index) => `<th scope="col">${escapeHtml(formatDateLabel(date, index === dates.length - 1))}</th>`).join("")}
+      ${dates.map((date, index) => `
+        <th scope="col" class="date-col">
+          <div class="date-head">
+            <button type="button" data-open-date="${escapeHtml(date)}">${escapeHtml(formatDateLabel(date, index === dates.length - 1))}</button>
+            ${index === dates.length - 1 ? `<button type="button" class="add-day-button" data-add-day aria-label="Add another day">+</button>` : ""}
+          </div>
+        </th>
+      `).join("")}
     </tr>
   `;
 
@@ -134,10 +147,6 @@ function detailRow(machine, colspan) {
     <tr class="detail-row">
       <td colspan="${colspan}">
         <div class="detail-panel" data-detail-panel="${escapeHtml(machine.id)}">
-          <label>
-            <span>Setup notes</span>
-            <textarea data-setup-notes rows="3">${escapeHtml(machine.setupNotes || "")}</textarea>
-          </label>
           <div class="detail-grid">
             <label>
               <span>Today's weight</span>
@@ -148,6 +157,10 @@ function detailRow(machine, colspan) {
               <input data-today-note type="text" value="${escapeHtml(todayLog?.note || "")}" placeholder="Felt smooth, seat tweak, etc.">
             </label>
           </div>
+          <label>
+            <span>Setup notes</span>
+            <textarea data-setup-notes rows="3">${escapeHtml(machine.setupNotes || "")}</textarea>
+          </label>
           <div class="detail-actions">
             <button type="button" class="primary" data-save-detail="${escapeHtml(machine.id)}">Save</button>
             ${todayLog ? `<button type="button" class="danger" data-delete-today="${escapeHtml(machine.id)}">Delete today</button>` : ""}
@@ -211,6 +224,14 @@ function formatDateLabel(date, isTodayColumn = false) {
   return `${Number(parts[1])}/${Number(parts[2])}`;
 }
 
+function formatLongDate(date) {
+  const normalized = normalizeDate(date);
+  if (!normalized) return "Edit day";
+  const [year, month, day] = normalized.split("-").map(Number);
+  const localDate = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(localDate);
+}
+
 function toggleMachine(machineId) {
   state.expandedId = state.expandedId === machineId ? "" : machineId;
   saveState();
@@ -242,6 +263,7 @@ function saveDetail(machineId) {
 
   state.machines = state.machines.map((item) => item.id === machineId ? updatedMachine : item);
   if (weight) appendTodayLog(updatedMachine, { weight, note }, { renderAfter: false });
+  state.expandedId = "";
   saveState();
   render();
   syncMachine(updatedMachine);
@@ -255,9 +277,13 @@ function deleteToday(machineId) {
 }
 
 function appendTodayLog(machine, values, options = {}) {
+  appendLogForDate(machine, isoDate(new Date()), values, options);
+}
+
+function appendLogForDate(machine, date, values, options = {}) {
   const log = {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-    date: isoDate(new Date()),
+    date,
     createdAt: new Date().toISOString(),
     profileName: state.settings.profileName || "",
     machineId: machine.id,
@@ -267,12 +293,93 @@ function appendTodayLog(machine, values, options = {}) {
     effort: "",
     rir: "",
     note: values.deleted ? DELETE_MARKER : values.note || "",
-    deleted: Boolean(values.deleted)
+    deleted: Boolean(values.deleted),
+    _demo: Boolean(values._demo)
   };
   state.logs.push(log);
   saveState();
   if (options.renderAfter !== false) render();
   syncLog(log);
+}
+
+function openDateModal(date) {
+  state.editingDate = normalizeDate(date) || isoDate(new Date());
+  els.editDate.value = state.editingDate;
+  renderDateModal();
+  els.dateBackdrop.hidden = false;
+  els.dateModal.hidden = false;
+  document.body.classList.add("is-modal-open");
+}
+
+function addDay() {
+  openDateModal(isoDate(addDays(new Date(), -1)));
+}
+
+function renderDateModal() {
+  const date = normalizeDate(els.editDate.value || state.editingDate);
+  els.dateTitle.textContent = formatLongDate(date);
+  els.dayMachineList.innerHTML = orderedMachines().map((machine) => {
+    const log = latestLogFor(machine.id, date);
+    return `
+      <section class="day-machine" data-day-machine="${escapeHtml(machine.id)}">
+        <h3>${escapeHtml(machine.name)}</h3>
+        <div class="day-fields">
+          <label>
+            <span>Weight</span>
+            <input data-day-weight type="number" min="0" step="5" inputmode="decimal" value="${escapeHtml(log?.weight || "")}">
+          </label>
+          <label>
+            <span>Note</span>
+            <input data-day-note type="text" value="${escapeHtml(log?.note || "")}" placeholder="Optional">
+          </label>
+        </div>
+      </section>
+    `;
+  }).join("");
+}
+
+function closeDateModal() {
+  state.editingDate = "";
+  els.dateBackdrop.hidden = true;
+  els.dateModal.hidden = true;
+  document.body.classList.remove("is-modal-open");
+}
+
+function saveDateModal() {
+  const date = normalizeDate(els.editDate.value || state.editingDate);
+  if (!date) return;
+  const localOnly = dateIsDemoOnly(date);
+  orderedMachines().forEach((machine) => {
+    const section = els.dayMachineList.querySelector(`[data-day-machine="${CSS.escape(machine.id)}"]`);
+    if (!section) return;
+    const weight = section.querySelector("[data-day-weight]").value.trim();
+    const note = section.querySelector("[data-day-note]").value.trim();
+    const existing = latestLogFor(machine.id, date);
+    if (!weight && !note && existing) {
+      appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true, _demo: localOnly }, { renderAfter: false });
+      return;
+    }
+    if (!weight && !note) return;
+    if (String(existing?.weight || "") === weight && String(existing?.note || "") === note) return;
+    appendLogForDate(machine, date, { weight, note, _demo: localOnly }, { renderAfter: false });
+  });
+  saveState();
+  closeDateModal();
+  render();
+  setSyncNote("Saved");
+}
+
+function deleteDateModal() {
+  const date = normalizeDate(els.editDate.value || state.editingDate);
+  if (!date) return;
+  const localOnly = dateIsDemoOnly(date);
+  orderedMachines().forEach((machine) => {
+    appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true, _demo: localOnly }, { renderAfter: false });
+  });
+  saveState();
+  closeDateModal();
+  render();
+  setSyncNote("Day deleted");
 }
 
 async function syncNow() {
@@ -425,6 +532,11 @@ function isDeleteMarker(log) {
   return Boolean(log?.deleted) || log?.note === DELETE_MARKER;
 }
 
+function dateIsDemoOnly(date) {
+  const logs = state.logs.filter((log) => normalizeDate(log.date) === normalizeDate(date));
+  return logs.length > 0 && logs.every((log) => log._demo);
+}
+
 function setSyncNote(message) {
   els.syncNote.textContent = message;
 }
@@ -496,6 +608,28 @@ function bindEvents() {
   els.populateSample.addEventListener("click", populateSampleData);
   els.clearSample.addEventListener("click", clearSampleData);
   els.settingsBackdrop.addEventListener("click", closeSettings);
+  document.querySelector("[data-close-date]").addEventListener("click", closeDateModal);
+  document.querySelector("[data-cancel-date]").addEventListener("click", closeDateModal);
+  document.querySelector("[data-save-date]").addEventListener("click", saveDateModal);
+  document.querySelector("[data-delete-date]").addEventListener("click", deleteDateModal);
+  els.dateBackdrop.addEventListener("click", closeDateModal);
+  els.editDate.addEventListener("change", renderDateModal);
+
+  els.tableHead.addEventListener("click", (event) => {
+    const openDateButton = event.target.closest("[data-open-date]");
+    if (openDateButton) {
+      event.stopPropagation();
+      openDateModal(openDateButton.dataset.openDate);
+      return;
+    }
+
+    const addDayButton = event.target.closest("[data-add-day]");
+    if (addDayButton) {
+      event.stopPropagation();
+      addDay();
+      return;
+    }
+  });
 
   els.machineTable.addEventListener("click", (event) => {
     const repeatButton = event.target.closest("[data-repeat-weight]");

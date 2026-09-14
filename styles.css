@@ -54,6 +54,7 @@ button { cursor: pointer; color: inherit; }
 .hero,
 .machine-panel,
 .settings-panel,
+.date-panel,
 .sheet-footer {
   border: 2px solid var(--ink);
   border-radius: 8px;
@@ -193,6 +194,45 @@ button { cursor: pointer; color: inherit; }
   left: 0;
   z-index: 3;
   text-align: left;
+}
+
+.date-col {
+  width: 108px;
+}
+
+.date-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+  align-items: center;
+}
+
+.date-head button {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  text-transform: uppercase;
+}
+
+.date-head button:hover {
+  background: rgba(207, 232, 137, 0.45);
+  box-shadow: none;
+  transform: none;
+}
+
+.date-head .add-day-button {
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .group-row th {
@@ -429,7 +469,8 @@ button.primary {
   background: rgba(23, 32, 24, 0.44);
 }
 
-.settings-modal {
+.settings-modal,
+.date-modal {
   position: fixed;
   inset: auto 12px 12px;
   z-index: 11;
@@ -437,24 +478,73 @@ button.primary {
   place-items: center;
 }
 
-.settings-panel {
+.settings-panel,
+.date-panel {
   width: min(480px, 100%);
   padding: 16px;
   display: grid;
   gap: 12px;
 }
 
-.settings-panel header {
+.date-panel {
+  width: min(720px, 100%);
+  max-height: min(720px, calc(100vh - 24px));
+  overflow: hidden;
+}
+
+.settings-panel header,
+.date-panel header {
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.settings-panel [data-close-settings] {
+.settings-panel [data-close-settings],
+.date-panel [data-close-date] {
   width: 42px;
   font-size: 1.2rem;
   line-height: 1;
+}
+
+.date-field {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.day-machine-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(410px, 52vh);
+  overflow-y: auto;
+  padding-right: 3px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.day-machine {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffef8;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.day-machine h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.day-fields {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.35fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.date-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
 }
 
 .toggle-row {
@@ -519,11 +609,25 @@ button.primary {
   }
 
   .detail-grid,
-  .settings-actions {
+  .settings-actions,
+  .date-actions,
+  .day-fields {
     grid-template-columns: 1fr;
   }
 
   .detail-actions { grid-template-columns: 1fr; }
+
+  .date-modal {
+    inset: 8px;
+  }
+
+  .date-panel {
+    max-height: calc(100vh - 16px);
+  }
+
+  .day-machine-list {
+    max-height: 48vh;
+  }
 }
 
 @media (max-width: 430px) {

@@ -29,7 +29,10 @@ The app shows:
 - A soft checkmark in today's column that repeats the previous logged weight
 - A green checked weight after today's set is logged; clicking it opens the editor
 - Accordion details per machine for setup notes, today's weight, today's note, and deleting today's entry
+- Date headers open a whole-day editor for all machine weights/notes on that date
+- A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
 - Local-only sample history for the previous six days to make a fresh browser feel populated
+- `workout-icon.png` plus `manifest.webmanifest` provide the phone/home-screen icon
 
 The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs.
 
@@ -48,6 +51,9 @@ Current table behavior reuses the existing backend without requiring a new Apps 
 - The frontend treats the latest log row for a machine/date as the current value, so editing today's value appends a new row rather than mutating the old one.
 - Deleting today's value also appends a log row, but with `note` set to `__WORKOUT_DELETE__` and blank `weight`. The frontend treats that marker as an empty machine/date. This keeps deletion compatible with the original append-only `logSet` action.
 - Sample rows have `_demo: true`, use IDs beginning with `demo-week-`, and are skipped by `syncLog`, so they stay local and never write to the Sheet.
+- Whole-day edits use `appendLogForDate`, which writes the same log shape as today's quick log but with the selected date.
+- Whole-day delete appends one deletion marker per default machine for that date.
+- When editing/deleting a day that contains only `_demo` sample logs, the new rows are also marked `_demo` so sample tinkering stays local.
 
 The website talks to:
 

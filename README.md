@@ -20,7 +20,10 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - A soft checkmark for quickly logging today's set at the previous weight
 - A green checked weight once today's set has been logged
 - Expandable machine details for setup notes, today's weight, today's note, and deleting today's entry
+- Clickable date headers for editing or deleting a whole workout day
+- A small plus button beside `Today` for adding a different date, such as yesterday
 - Optional local-only sample history for the previous six days, shown across the compact five-column table
+- A home-screen icon via `workout-icon.png` and `manifest.webmanifest`
 
 The current UI keeps logging intentionally simple: weight plus an optional note. The backend can still accept older fields like reps, effort, and reps in reserve, but the website no longer shows them.
 
@@ -121,6 +124,8 @@ The script creates/updates:
 - `Logs`: dated workout logs. The table uses the latest log row for each machine/date.
 
 Deleting today's entry does not physically remove a row from the Sheet. The site appends a small hidden deletion marker, then treats that machine/date as empty. This works with the original `logSet` backend action, so it does not require a backend redeploy.
+
+The date editor uses the same pattern. Saving a day appends new log rows for changed machine weights/notes. Deleting a day appends deletion markers for each machine on that date.
 
 ## If You Later Change The Script
 

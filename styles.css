@@ -268,7 +268,9 @@ button { cursor: pointer; color: inherit; }
 .group-row th {
   position: sticky;
   left: 0;
-  z-index: 1;
+  z-index: 4;
+  background: var(--soft);
+  box-shadow: 8px 0 0 var(--soft);
   color: var(--green);
   text-align: left;
   text-transform: uppercase;
@@ -624,15 +626,41 @@ button.primary {
   }
 
   .machine-table {
-    min-width: 640px;
+    min-width: 540px;
   }
 
   .machine-table .machine-col {
-    width: 190px;
+    width: 132px;
+  }
+
+  .date-col {
+    width: 92px;
   }
 
   .machine-name small {
-    max-width: 160px;
+    display: none;
+  }
+
+  .machine-name {
+    min-height: 48px;
+  }
+
+  .machine-name span {
+    font-size: 0.94rem;
+    line-height: 1.08;
+  }
+
+  .date-head {
+    gap: 3px;
+  }
+
+  .date-head button {
+    padding: 0 4px;
+  }
+
+  .date-head .add-day-button {
+    width: 25px;
+    min-height: 25px;
   }
 
   .detail-grid,

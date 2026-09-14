@@ -577,6 +577,14 @@ function setSyncNote(message) {
   els.syncNote.textContent = message;
 }
 
+function setIdleSyncNote() {
+  if (!state.settings.backendUrl) {
+    setSyncNote("Saved locally");
+    return;
+  }
+  setSyncNote(state.settings.autoSync ? "Ready" : "Sync off");
+}
+
 function openSettings() {
   els.settingsBackdrop.hidden = false;
   els.settingsModal.hidden = false;
@@ -597,6 +605,7 @@ function saveSettings() {
   closeSettings();
   render();
   if (state.settings.autoSync) syncNow();
+  else setIdleSyncNote();
 }
 
 function resetSite() {
@@ -714,6 +723,7 @@ function init() {
   bindEvents();
   render();
   if (state.settings.autoSync) syncNow();
+  else setIdleSyncNote();
 }
 
 init();

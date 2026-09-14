@@ -146,7 +146,7 @@ function machineRow(machine, dates) {
         if (date === today) {
           const previous = previousWeight(machine.id, today) || defaultValue(machine);
           if (log?.weight) {
-            return `<td class="today-cell"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button>${todayNoteHtml(log)}</td>`;
+            return `<td class="today-cell"><div class="today-logged"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button><button type="button" class="clear-today-button" data-delete-today="${escapeHtml(machine.id)}" aria-label="Clear today's ${escapeHtml(machine.name)}">×</button>${todayNoteHtml(log)}</div></td>`;
           }
           return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }

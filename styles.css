@@ -129,16 +129,6 @@ button { cursor: pointer; color: inherit; }
   overflow: hidden;
 }
 
-.panel-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: end;
-  padding: 16px;
-  border-bottom: 2px solid var(--ink);
-  background: linear-gradient(135deg, #fffef8 0%, #eef9f1 100%);
-}
-
 .eyebrow {
   margin: 0 0 8px;
   color: var(--blue);
@@ -148,17 +138,10 @@ button { cursor: pointer; color: inherit; }
   letter-spacing: 0;
 }
 
-.panel-heading h2,
 .settings-panel h2 {
   margin: 0;
   font-size: 2rem;
   line-height: 1;
-}
-
-.panel-heading p:last-child {
-  margin: 0;
-  color: var(--muted);
-  font-weight: 850;
 }
 
 .table-scroll {
@@ -492,7 +475,16 @@ button.primary {
 .sheet-footer {
   padding: 12px 14px;
   display: flex;
-  justify-content: end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.sync-pill {
+  color: rgba(101, 112, 100, 0.84);
+  font-size: 0.74rem;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .sheet-footer a {
@@ -639,11 +631,6 @@ button.primary {
     min-height: 50px;
   }
 
-  .panel-heading {
-    align-items: start;
-    display: grid;
-  }
-
   .machine-name small {
     display: none;
   }
@@ -703,7 +690,6 @@ button.primary {
     font-size: 2.55rem;
   }
 
-  .panel-heading h2,
   .settings-panel h2 {
     font-size: 1.55rem;
   }

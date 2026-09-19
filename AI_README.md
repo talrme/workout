@@ -55,7 +55,7 @@ Current table behavior reuses the existing backend without requiring a new Apps 
 - `Logs.note` stores the note for that machine/date.
 - The frontend treats the latest log row for a machine/date as the current value, so editing today's value appends a new row rather than mutating the old one.
 - Deleting today's value also appends a log row, but with `note` set to `__WORKOUT_DELETE__` and blank `weight`. The frontend treats that marker as an empty machine/date. This keeps deletion compatible with the original append-only `logSet` action.
-- Auto sync is frontend-only: the app syncs on page open, when returning to the foreground, and every 15 seconds while open. Save responses also merge the returned backend snapshot.
+- Auto sync is frontend-only: the app syncs on page open, when returning to the foreground, and for a two-minute catch-up window after opening or saving. During that short window it checks every 15 seconds, then stops. Save responses also merge the returned backend snapshot.
 - `config.js.defaultBackendUrl` is authoritative on load, so stale localStorage backend URLs do not strand a browser on an old backend.
 - Sample rows have `_demo: true`, use IDs beginning with `demo-week-`, and are skipped by `syncLog`, so they stay local and never write to the Sheet.
 - Whole-day edits use `appendLogForDate`, which writes the same log shape as today's quick log but with the selected date.

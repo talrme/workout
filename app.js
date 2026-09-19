@@ -6,6 +6,7 @@ const DEMO_LOG_PREFIX = "demo-week-";
 const DELETE_MARKER = "__WORKOUT_DELETE__";
 const GROUP_ORDER = ["Legs", "Upper body", "Core", "Other"];
 const SYNC_INTERVAL_MS = 15000;
+const SYNC_BURST_DURATION_MS = 2 * 60 * 1000;
 
 const DEFAULT_MACHINES = [
   { id: "leg-press", name: "Leg Press", group: "Legs", seedWeight: 180, setupNotes: "Seat comfortable, knees tracking straight." },
@@ -34,6 +35,8 @@ const state = {
 
 let syncTimer = 0;
 let syncInFlight = false;
+let syncBurstEndsAt = 0;
+let lastSyncStartedAt = 0;
 
 const els = {
   tableHead: document.querySelector("[data-table-head]"),
@@ -526,6 +529,7 @@ async function syncNow(options = {}) {
   }
   if (syncInFlight) return;
   syncInFlight = true;
+  lastSyncStartedAt = Date.now();
   if (!options.quiet) setSyncNote("Syncing...");
   try {
     const response = await backendRequest("snapshot");
@@ -548,6 +552,7 @@ function syncMachine(machine) {
   backendRequest("saveMachine", { machine }).then((response) => {
     if (response?.ok) applySnapshot(response, { renderAfter: true });
     setSyncNote(response?.ok ? "Synced" : "Sync issue");
+    if (response?.ok) startAutoSync();
   }).catch((error) => {
     console.warn(error);
     setSyncNote("Saved locally");
@@ -560,6 +565,7 @@ function syncLog(log) {
   backendRequest("logSet", { log }).then((response) => {
     if (response?.ok) applySnapshot(response, { renderAfter: true });
     setSyncNote(response?.ok ? "Synced" : "Sync issue");
+    if (response?.ok) startAutoSync();
   }).catch((error) => {
     console.warn(error);
     setSyncNote("Saved locally");
@@ -712,15 +718,43 @@ function setIdleSyncNote() {
   setSyncNote(state.settings.autoSync ? "Ready" : "Sync off");
 }
 
+function triggerAutoSync(options = {}) {
+  if (!state.settings.autoSync) {
+    setIdleSyncNote();
+    return;
+  }
+  syncNow(options);
+  startAutoSync();
+}
+
 function startAutoSync() {
   window.clearInterval(syncTimer);
   if (!state.settings.autoSync || !state.settings.backendUrl) return;
-  syncTimer = window.setInterval(() => syncNow({ quiet: true }), SYNC_INTERVAL_MS);
+  syncBurstEndsAt = Date.now() + SYNC_BURST_DURATION_MS;
+  syncTimer = window.setInterval(() => {
+    if (Date.now() >= syncBurstEndsAt) {
+      stopAutoSync();
+      setIdleSyncNote();
+      return;
+    }
+    syncNow({ quiet: true });
+  }, SYNC_INTERVAL_MS);
 }
 
 function stopAutoSync() {
   window.clearInterval(syncTimer);
   syncTimer = 0;
+  syncBurstEndsAt = 0;
+}
+
+function syncAfterReturn() {
+  if (!state.settings.autoSync) return;
+  const justSynced = Date.now() - lastSyncStartedAt < 5000;
+  if (justSynced) {
+    startAutoSync();
+    return;
+  }
+  triggerAutoSync({ quiet: true });
 }
 
 function openSettings() {
@@ -744,8 +778,7 @@ function saveSettings() {
   closeSettings();
   render();
   if (state.settings.autoSync) {
-    syncNow();
-    startAutoSync();
+    triggerAutoSync();
   } else {
     stopAutoSync();
     setIdleSyncNote();
@@ -809,7 +842,11 @@ function bindEvents() {
   els.editDate.addEventListener("change", renderDateModal);
   window.addEventListener("resize", () => updateTableWidth());
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && state.settings.autoSync) syncNow({ quiet: true });
+    if (!document.hidden) syncAfterReturn();
+  });
+  window.addEventListener("focus", syncAfterReturn);
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) syncAfterReturn();
   });
 
   els.tableHead.addEventListener("click", (event) => {
@@ -881,8 +918,7 @@ function init() {
   bindEvents();
   render();
   if (state.settings.autoSync) {
-    syncNow();
-    startAutoSync();
+    triggerAutoSync();
   } else {
     setIdleSyncNote();
   }

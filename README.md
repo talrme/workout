@@ -29,7 +29,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, or Other
 - Optional local-only sample history for the previous six days, shown across the compact five-column table
 - A home-screen icon via `workout-icon.png` and `manifest.webmanifest`
-- Automatic Google Sheet sync on page open, when the page returns to the foreground, and about every 15 seconds while open
+- Automatic Google Sheet sync on page open, when the page returns to the foreground, and for a short catch-up window after opening or saving
 
 The current UI keeps logging intentionally simple: a value plus an optional note. For machines, that value is weight; for planks, it is time, like `30s`. The backend can still accept older fields like reps, effort, and reps in reserve, but the website no longer shows them.
 
@@ -122,7 +122,7 @@ The app should then sync with the Google Sheet.
 
 ## What Happens After That
 
-When you save setup notes or log today's weight, the website calls your Apps Script URL. While the page is open, it also quietly refreshes from the Sheet about every 15 seconds and when the browser returns to the foreground.
+When you save setup notes or log today's weight, the website calls your Apps Script URL and then does a short catch-up window: it checks the Sheet about every 15 seconds for two minutes, then stops. The site also syncs on page refresh/open and whenever the browser or phone app returns to the foreground.
 
 The script creates/updates:
 

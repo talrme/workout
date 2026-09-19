@@ -12,6 +12,7 @@
   --soft: #eef5e6;
   --machine-col-width: 250px;
   --date-col-width: 108px;
+  --add-day-col-width: 92px;
 }
 
 * { box-sizing: border-box; }
@@ -186,8 +187,7 @@ button { cursor: pointer; color: inherit; }
 
 .date-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
 }
 
@@ -217,16 +217,54 @@ button { cursor: pointer; color: inherit; }
   line-height: 1;
 }
 
-.date-head .add-day-button {
-  width: 28px;
-  min-height: 28px;
-  padding: 0;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: var(--lime);
+.add-day-col {
+  width: var(--add-day-col-width);
+  position: sticky;
+  right: 0;
+  z-index: 4;
+  box-shadow: -8px 0 0 #fff8df;
+}
+
+.add-day-button {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 2px solid rgba(23, 32, 24, 0.42);
+  border-radius: 999px;
+  background: rgba(207, 232, 137, 0.52);
   color: var(--ink);
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  text-transform: none;
+}
+
+.add-day-button span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  min-height: 18px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.82rem;
   line-height: 1;
+}
+
+.add-day-button small {
+  color: currentColor;
+  font-size: 0.58rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.add-day-spacer {
+  width: var(--add-day-col-width);
+  position: sticky;
+  right: 0;
+  background: var(--paper);
+  box-shadow: -8px 0 0 var(--paper);
 }
 
 .group-row th,
@@ -289,6 +327,26 @@ button { cursor: pointer; color: inherit; }
 .machine-row.is-open th,
 .machine-row.is-open td {
   background: #fff8df;
+}
+
+.machine-row.is-suggested th,
+.machine-row.is-suggested td {
+  background: #fff3d5;
+}
+
+.machine-row.is-suggested th {
+  box-shadow: inset 4px 0 0 rgba(238, 140, 74, 0.72), 8px 0 0 #fff3d5;
+}
+
+.machine-row.is-suggested .add-day-spacer {
+  background: #fff3d5;
+  box-shadow: -8px 0 0 #fff3d5;
+}
+
+.machine-row.is-open.is-suggested th,
+.machine-row.is-open.is-suggested td,
+.machine-row.is-open.is-suggested .add-day-spacer {
+  background: #fff2cc;
 }
 
 .machine-name {
@@ -544,6 +602,31 @@ button.primary {
   text-decoration: underline;
 }
 
+.workout-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 11px;
+  border-top: 1px solid var(--line);
+  color: rgba(101, 112, 100, 0.9);
+  font-size: 0.75rem;
+  font-weight: 820;
+}
+
+.workout-legend strong {
+  color: var(--ink);
+  font-weight: 950;
+}
+
+.suggestion-swatch {
+  width: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  border: 2px solid rgba(238, 140, 74, 0.58);
+  border-radius: 6px;
+  background: #fff3d5;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -674,6 +757,7 @@ button.primary {
   :root {
     --machine-col-width: 132px;
     --date-col-width: 92px;
+    --add-day-col-width: 76px;
   }
 
   .app-shell {
@@ -715,9 +799,20 @@ button.primary {
     padding: 0 4px;
   }
 
-  .date-head .add-day-button {
-    width: 25px;
-    min-height: 25px;
+  .add-day-button {
+    min-height: 32px;
+    padding: 0 6px;
+    gap: 4px;
+  }
+
+  .add-day-button span {
+    width: 17px;
+    min-height: 17px;
+    font-size: 0.78rem;
+  }
+
+  .add-day-button small {
+    font-size: 0.52rem;
   }
 
   .today-note {

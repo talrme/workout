@@ -25,7 +25,8 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Subtle today's notes under logged values, with a local setting to hide them from the table
 - Expandable machine details for setup notes, today's weight, today's note, and deleting today's entry
 - Clickable date headers for editing or deleting a whole workout day
-- A small plus button beside `Today` for adding a different date, such as yesterday
+- A small right-side `Add Day` button for adding a different date, such as yesterday
+- Gentle suggested workout highlighting when a machine has not been done in the last 3 workout days
 - A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, or Other
 - Optional local-only sample history for the previous six days, shown across the compact five-column table
 - A home-screen icon via `workout-icon.png` and `manifest.webmanifest`

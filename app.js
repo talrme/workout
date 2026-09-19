@@ -42,6 +42,7 @@ const els = {
   tableHead: document.querySelector("[data-table-head]"),
   machineTableEl: document.querySelector(".machine-table"),
   machineTable: document.querySelector("[data-machine-table]"),
+  suggestionLegend: document.querySelector("[data-suggestion-legend]"),
   syncNote: document.querySelector("[data-sync-note]"),
   sheetLink: document.querySelector("[data-sheet-link]"),
   profileName: document.querySelector("[data-profile-name]"),
@@ -104,6 +105,9 @@ function renderMachineTable() {
   const dates = displayDates();
   const today = isoDate(new Date());
   updateTableWidth(dates.length);
+  const machines = orderedMachines();
+  const suggestionInfo = suggestedWorkoutInfo(machines);
+  renderSuggestionLegend(suggestionInfo);
   els.tableHead.innerHTML = `
     <tr>
       <th scope="col" class="machine-col">Machine</th>
@@ -114,24 +118,29 @@ function renderMachineTable() {
               <span>${escapeHtml(formatDayLabel(date, date === today))}</span>
               <small>${escapeHtml(formatDateLabel(date))}</small>
             </button>
-            ${date === today ? `<button type="button" class="add-day-button" data-add-day aria-label="Add another day">+</button>` : ""}
           </div>
         </th>
       `).join("")}
+      <th scope="col" class="add-day-col">
+        <button type="button" class="add-day-button" data-add-day aria-label="Add another workout day">
+          <span aria-hidden="true">+</span>
+          <small>Add Day</small>
+        </button>
+      </th>
     </tr>
   `;
 
   let lastGroup = "";
   const rows = [];
-  orderedMachines().forEach((machine) => {
+  machines.forEach((machine) => {
     if (machine.group !== lastGroup) {
       lastGroup = machine.group;
-      rows.push(`<tr class="group-row"><th scope="row">${escapeHtml(lastGroup)}</th><td colspan="${dates.length}"></td></tr>`);
+      rows.push(`<tr class="group-row"><th scope="row">${escapeHtml(lastGroup)}</th><td colspan="${dates.length + 1}"></td></tr>`);
     }
-    rows.push(machineRow(machine, dates));
-    if (state.expandedId === machine.id) rows.push(detailRow(machine, dates.length + 1));
+    rows.push(machineRow(machine, dates, suggestionInfo.suggestedIds));
+    if (state.expandedId === machine.id) rows.push(detailRow(machine, dates.length + 2));
   });
-  rows.push(addWorkoutRow(dates.length + 1));
+  rows.push(addWorkoutRow(dates.length + 2));
   els.machineTable.innerHTML = rows.join("");
 }
 
@@ -139,7 +148,8 @@ function updateTableWidth(dateCount = displayDates().length) {
   const compact = window.matchMedia("(max-width: 760px)").matches;
   const machineWidth = compact ? 132 : 250;
   const dateWidth = compact ? 92 : 108;
-  els.machineTableEl.style.setProperty("--table-target-width", `${machineWidth + (dateCount * dateWidth)}px`);
+  const addDayWidth = compact ? 78 : 92;
+  els.machineTableEl.style.setProperty("--table-target-width", `${machineWidth + (dateCount * dateWidth) + addDayWidth}px`);
 }
 
 function orderedMachines() {
@@ -158,10 +168,11 @@ function groupRank(group) {
   return index === -1 ? GROUP_ORDER.length : index;
 }
 
-function machineRow(machine, dates) {
+function machineRow(machine, dates, suggestedIds = new Set()) {
   const today = isoDate(new Date());
+  const isSuggested = suggestedIds.has(machine.id);
   return `
-    <tr class="machine-row ${state.expandedId === machine.id ? "is-open" : ""}" data-machine-row="${escapeHtml(machine.id)}">
+    <tr class="machine-row ${state.expandedId === machine.id ? "is-open" : ""} ${isSuggested ? "is-suggested" : ""}" data-machine-row="${escapeHtml(machine.id)}" ${isSuggested ? `title="${escapeHtml(machine.name)} has not been done in the last 3 workout days"` : ""}>
       <th scope="row">
         <button type="button" class="machine-name" data-expand="${escapeHtml(machine.id)}" aria-expanded="${state.expandedId === machine.id}">
           <span>${escapeHtml(machine.name)}</span>
@@ -179,6 +190,7 @@ function machineRow(machine, dates) {
         }
         return `<td class="${log?.weight ? "" : "is-missing"}">${log?.weight ? `<span class="weight-chip">${escapeHtml(log.weight)}</span>` : `<span class="empty-cell">-</span>`}</td>`;
       }).join("")}
+      <td class="add-day-spacer" aria-hidden="true"></td>
     </tr>
   `;
 }
@@ -262,6 +274,37 @@ function latestEventFor(machineId, date) {
 
 function dateHasVisibleLog(date) {
   return orderedMachines().some((machine) => latestLogFor(machine.id, date));
+}
+
+function dateHasVisibleLogForMachines(date, machines) {
+  return machines.some((machine) => latestLogFor(machine.id, date));
+}
+
+function recentWorkoutDates(limit, machines) {
+  return Array.from(new Set(state.logs
+    .filter((log) => String(log.weight || "").trim())
+    .map((log) => normalizeDate(log.date))
+    .filter((date) => date && dateHasVisibleLogForMachines(date, machines))))
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, limit);
+}
+
+function suggestedWorkoutInfo(machines) {
+  const recentDates = recentWorkoutDates(3, machines);
+  const suggestedIds = new Set();
+  if (recentDates.length >= 3) {
+    machines.forEach((machine) => {
+      const wasRecentlyDone = recentDates.some((date) => latestLogFor(machine.id, date));
+      if (!wasRecentlyDone) suggestedIds.add(machine.id);
+    });
+  }
+  return { recentDates, suggestedIds };
+}
+
+function renderSuggestionLegend(info) {
+  if (!els.suggestionLegend) return;
+  const hasSuggestions = info.recentDates.length >= 3 && info.suggestedIds.size > 0;
+  els.suggestionLegend.hidden = !hasSuggestions;
 }
 
 function previousWeight(machineId, beforeDate) {

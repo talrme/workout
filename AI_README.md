@@ -60,6 +60,7 @@ Current table behavior reuses the existing backend without requiring a new Apps 
 - Sample rows have `_demo: true`, use IDs beginning with `demo-week-`, and are skipped by `syncLog`, so they stay local and never write to the Sheet.
 - Whole-day edits use `appendLogForDate`, which writes the same log shape as today's quick log but with the selected date.
 - Whole-day delete appends one deletion marker per default machine for that date.
+- Suggested workout highlighting is frontend-only: a row is highlighted when its machine is absent from the last 3 workout dates that have any visible logged value.
 - When editing/deleting a day that contains only `_demo` sample logs, the new rows are also marked `_demo` so sample tinkering stays local.
 - The `hideTodayNotes` setting lives only in localStorage and does not require backend support.
 - Custom workouts are preserved in localStorage. The current Apps Script `Machines` shape can store their id/name/default value/setup notes, but not section/group or value label unless the backend is expanded.

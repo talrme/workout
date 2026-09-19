@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-title" content="Workout">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="workout-icon.png">
-  <link rel="manifest" href="manifest.webmanifest?v=20260918-sync-burst">
-  <link rel="stylesheet" href="styles.css?v=20260918-sync-burst">
+  <link rel="manifest" href="manifest.webmanifest?v=20260918-suggestions">
+  <link rel="stylesheet" href="styles.css?v=20260918-suggestions">
 </head>
 <body>
   <main class="app-shell">
@@ -26,6 +26,10 @@
           <thead data-table-head></thead>
           <tbody data-machine-table></tbody>
         </table>
+      </div>
+      <div class="workout-legend" data-suggestion-legend hidden>
+        <span class="suggestion-swatch" aria-hidden="true"></span>
+        <span><strong>Suggested workout</strong> - not done in the last 3 workout days.</span>
       </div>
     </section>
 
@@ -142,7 +146,7 @@
     </div>
   </section>
 
-  <script src="config.js?v=20260918-sync-burst"></script>
-  <script src="app.js?v=20260918-sync-burst"></script>
+  <script src="config.js?v=20260918-suggestions"></script>
+  <script src="app.js?v=20260918-suggestions"></script>
 </body>
 </html>

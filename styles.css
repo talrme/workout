@@ -775,16 +775,10 @@ button.primary {
   accent-color: var(--green);
 }
 
-.settings-actions,
-.sample-actions {
+.settings-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-
-.sample-actions {
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
 }
 
 @media (max-width: 760px) {

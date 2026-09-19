@@ -1,8 +1,6 @@
 const STORAGE_KEY = "workout-sheet-prototype-v2";
 const OLD_STORAGE_KEY = "workout-sheet-prototype-v1";
 const HISTORY_COLUMNS = 5;
-const DEMO_DAYS = 6;
-const DEMO_LOG_PREFIX = "demo-week-";
 const DELETE_MARKER = "__WORKOUT_DELETE__";
 const GROUP_ORDER = ["Legs", "Upper body", "Core", "Other"];
 const SYNC_INTERVAL_MS = 15000;
@@ -52,8 +50,6 @@ const els = {
   hideTodayNotes: document.querySelector("[data-hide-today-notes]"),
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
   settingsModal: document.querySelector("[data-settings-modal]"),
-  populateSample: document.querySelector("[data-populate-sample]"),
-  clearSample: document.querySelector("[data-clear-sample]"),
   dateBackdrop: document.querySelector("[data-date-backdrop]"),
   dateModal: document.querySelector("[data-date-modal]"),
   dateTitle: document.querySelector("[data-date-title]"),
@@ -81,10 +77,7 @@ function loadState() {
     state.settings.backendUrl = window.WORKOUT_CONFIG.defaultBackendUrl;
   }
   state.settings.autoSync = state.settings.autoSync ?? window.WORKOUT_CONFIG?.autoSync ?? true;
-  if (state.settings.backendUrl) {
-    state.logs = state.logs.filter((log) => !log._demo);
-  }
-  if (!state.logs.length && !state.settings.backendUrl) state.logs = createDemoLogs();
+  state.logs = state.logs.filter((log) => !isLegacySampleLog(log));
 }
 
 function saveState() {
@@ -480,8 +473,7 @@ function appendLogForDate(machine, date, values, options = {}) {
     effort: "",
     rir: "",
     note: values.deleted ? DELETE_MARKER : values.note || "",
-    deleted: Boolean(values.deleted),
-    _demo: Boolean(values._demo)
+    deleted: Boolean(values.deleted)
   };
   state.logs.push(log);
   saveState();
@@ -551,8 +543,7 @@ function deleteDayEntry(machineId) {
   const machine = state.machines.find((item) => item.id === machineId);
   const existing = latestLogFor(machineId, date);
   if (!date || !machine || !existing) return;
-  const localOnly = dateIsDemoOnly(date);
-  appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true, _demo: localOnly }, { renderAfter: false });
+  appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
   state.editingMachineId = machineId;
   saveState();
   render();
@@ -563,7 +554,6 @@ function deleteDayEntry(machineId) {
 function saveDateModal() {
   const date = normalizeDate(els.editDate.value || state.editingDate);
   if (!date) return;
-  const localOnly = dateIsDemoOnly(date);
   orderedMachines().forEach((machine) => {
     const section = els.dayMachineList.querySelector(`[data-day-machine="${CSS.escape(machine.id)}"]`);
     if (!section) return;
@@ -571,12 +561,12 @@ function saveDateModal() {
     const note = section.querySelector("[data-day-note]").value.trim();
     const existing = latestLogFor(machine.id, date);
     if (!weight && !note && existing) {
-      appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true, _demo: localOnly }, { renderAfter: false });
+      appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
       return;
     }
     if (!weight && !note) return;
     if (String(existing?.weight || "") === weight && String(existing?.note || "") === note) return;
-    appendLogForDate(machine, date, { weight, note, _demo: localOnly }, { renderAfter: false });
+    appendLogForDate(machine, date, { weight, note }, { renderAfter: false });
   });
   saveState();
   closeDateModal();
@@ -587,9 +577,8 @@ function saveDateModal() {
 function deleteDateModal() {
   const date = normalizeDate(els.editDate.value || state.editingDate);
   if (!date) return;
-  const localOnly = dateIsDemoOnly(date);
   orderedMachines().forEach((machine) => {
-    appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true, _demo: localOnly }, { renderAfter: false });
+    appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
   });
   saveState();
   closeDateModal();
@@ -635,7 +624,6 @@ function syncMachine(machine) {
 }
 
 function syncLog(log) {
-  if (log._demo) return;
   if (!state.settings.backendUrl) return;
   backendRequest("logSet", { log }).then((response) => {
     if (response?.ok) applySnapshot(response, { renderAfter: true });
@@ -721,64 +709,19 @@ function mergeMachines(incoming) {
 }
 
 function mergeLogs(incoming) {
-  const byId = new Map(state.logs.filter((log) => !log._demo).map((log) => [log.id, log]));
+  const byId = new Map(state.logs.filter((log) => !isLegacySampleLog(log)).map((log) => [log.id, log]));
   incoming.forEach((log) => {
     if (log.id) byId.set(log.id, { ...log, date: normalizeDate(log.date) });
   });
   return Array.from(byId.values());
 }
 
-function createDemoLogs() {
-  const today = new Date();
-  return DEFAULT_MACHINES.flatMap((machine, machineIndex) => {
-    return Array.from({ length: DEMO_DAYS }, (_, dayIndex) => {
-      const daysAgo = DEMO_DAYS - dayIndex;
-      const date = addDays(today, -daysAgo);
-      const weightBump = Math.max(0, dayIndex - 2) * 5 + (machineIndex % 2 ? 0 : 5);
-      const skipped = (machineIndex + dayIndex) % 7 === 0;
-      if (skipped) return null;
-      const dateText = isoDate(date);
-      const weight = machine.id === "plank" ? `${30 + (dayIndex % 3) * 5}s` : String(Number(machine.seedWeight || 0) + weightBump);
-      return {
-        id: `${DEMO_LOG_PREFIX}${machine.id}-${dateText}`,
-        date: dateText,
-        createdAt: `${dateText}T12:00:00.000Z`,
-        profileName: "Sample",
-        machineId: machine.id,
-        machineName: machine.name,
-        weight,
-        reps: "",
-        effort: "",
-        rir: "",
-        note: "",
-        _demo: true
-      };
-    }).filter(Boolean);
-  });
-}
-
-function populateSampleData() {
-  state.logs = state.logs.filter((log) => !log._demo);
-  state.logs.push(...createDemoLogs());
-  saveState();
-  render();
-  setSyncNote("Sample data");
-}
-
-function clearSampleData() {
-  state.logs = state.logs.filter((log) => !log._demo);
-  saveState();
-  render();
-  setSyncNote(state.logs.length ? "Synced" : "No history");
-}
-
 function isDeleteMarker(log) {
   return Boolean(log?.deleted) || log?.note === DELETE_MARKER;
 }
 
-function dateIsDemoOnly(date) {
-  const logs = state.logs.filter((log) => normalizeDate(log.date) === normalizeDate(date));
-  return logs.length > 0 && logs.every((log) => log._demo);
+function isLegacySampleLog(log) {
+  return Boolean(log?._demo) || String(log?.id || "").startsWith("demo-week-");
 }
 
 function setSyncNote(message) {
@@ -902,8 +845,6 @@ function bindEvents() {
   document.querySelector("[data-close-settings]").addEventListener("click", closeSettings);
   document.querySelector("[data-save-settings]").addEventListener("click", saveSettings);
   document.querySelector("[data-reset-site]").addEventListener("click", resetSite);
-  els.populateSample.addEventListener("click", populateSampleData);
-  els.clearSample.addEventListener("click", clearSampleData);
   els.settingsBackdrop.addEventListener("click", closeSettings);
   document.querySelector("[data-close-date]").addEventListener("click", closeDateModal);
   document.querySelector("[data-cancel-date]").addEventListener("click", closeDateModal);

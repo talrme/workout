@@ -29,7 +29,6 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - A small right-side `Add Day` button for adding a different date, such as yesterday
 - Gentle suggested workout highlighting when a machine has not been done in the last 3 workout days
 - A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, or Other
-- Optional local-only sample history for the previous six days, shown across the compact five-column table
 - A home-screen icon via `workout-icon.png` and `manifest.webmanifest`
 - Automatic Google Sheet sync on page open, when the page returns to the foreground, and for a short catch-up window after opening or saving
 
@@ -122,7 +121,7 @@ If you create a new backend later:
 
 The app should then sync with the Google Sheet.
 
-When a real backend is configured, sample/demo rows are stripped from local state during load and sync so placeholder history cannot mix into real Sheet data.
+Older browser-local placeholder rows are stripped from local state during load and sync so stale fake history cannot mix into real Sheet data.
 
 ## What Happens After That
 

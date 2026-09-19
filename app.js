@@ -24,6 +24,7 @@ const state = {
   logs: [],
   expandedId: "",
   editingDate: "",
+  editingMachineId: "",
   settings: {
     backendUrl: window.WORKOUT_CONFIG?.defaultBackendUrl || "",
     profileName: "Tal",
@@ -80,7 +81,10 @@ function loadState() {
     state.settings.backendUrl = window.WORKOUT_CONFIG.defaultBackendUrl;
   }
   state.settings.autoSync = state.settings.autoSync ?? window.WORKOUT_CONFIG?.autoSync ?? true;
-  if (!state.logs.length) state.logs = createDemoLogs();
+  if (state.settings.backendUrl) {
+    state.logs = state.logs.filter((log) => !log._demo);
+  }
+  if (!state.logs.length && !state.settings.backendUrl) state.logs = createDemoLogs();
 }
 
 function saveState() {
@@ -188,7 +192,7 @@ function machineRow(machine, dates, suggestedIds = new Set()) {
           }
           return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }
-        return `<td class="${log?.weight ? "" : "is-missing"}">${log?.weight ? `<span class="weight-chip">${escapeHtml(log.weight)}</span>` : `<span class="empty-cell">-</span>`}</td>`;
+        return `<td class="${log?.weight ? "" : "is-missing"}">${log?.weight ? `<button type="button" class="weight-chip history-entry-button" data-open-entry-date="${escapeHtml(date)}" data-open-entry-machine="${escapeHtml(machine.id)}" aria-label="Edit ${escapeHtml(machine.name)} for ${escapeHtml(formatLongDate(date))}">${escapeHtml(log.weight)}</button>` : `<span class="empty-cell">-</span>`}</td>`;
       }).join("")}
       <td class="add-day-spacer" aria-hidden="true"></td>
     </tr>
@@ -485,13 +489,23 @@ function appendLogForDate(machine, date, values, options = {}) {
   syncLog(log);
 }
 
-function openDateModal(date) {
+function openDateModal(date, focusMachineId = "") {
   state.editingDate = normalizeDate(date) || isoDate(new Date());
+  state.editingMachineId = focusMachineId;
   els.editDate.value = state.editingDate;
   renderDateModal();
   els.dateBackdrop.hidden = false;
   els.dateModal.hidden = false;
   document.body.classList.add("is-modal-open");
+  if (focusMachineId) {
+    window.setTimeout(() => {
+      const section = els.dayMachineList.querySelector(`[data-day-machine="${CSS.escape(focusMachineId)}"]`);
+      const input = section?.querySelector("[data-day-weight]");
+      section?.scrollIntoView({ block: "center" });
+      input?.focus();
+      input?.select();
+    }, 0);
+  }
 }
 
 function addDay() {
@@ -504,8 +518,11 @@ function renderDateModal() {
   els.dayMachineList.innerHTML = orderedMachines().map((machine) => {
     const log = latestLogFor(machine.id, date);
     return `
-      <section class="day-machine" data-day-machine="${escapeHtml(machine.id)}">
-        <h3>${escapeHtml(machine.name)}</h3>
+      <section class="day-machine ${state.editingMachineId === machine.id ? "is-focused" : ""}" data-day-machine="${escapeHtml(machine.id)}">
+        <div class="day-machine-head">
+          <h3>${escapeHtml(machine.name)}</h3>
+          ${log ? `<button type="button" class="entry-delete-button" data-delete-day-entry="${escapeHtml(machine.id)}">Delete</button>` : ""}
+        </div>
         <div class="day-fields">
           <label>
             <span>${escapeHtml(valueLabel(machine))}</span>
@@ -523,9 +540,24 @@ function renderDateModal() {
 
 function closeDateModal() {
   state.editingDate = "";
+  state.editingMachineId = "";
   els.dateBackdrop.hidden = true;
   els.dateModal.hidden = true;
   document.body.classList.remove("is-modal-open");
+}
+
+function deleteDayEntry(machineId) {
+  const date = normalizeDate(els.editDate.value || state.editingDate);
+  const machine = state.machines.find((item) => item.id === machineId);
+  const existing = latestLogFor(machineId, date);
+  if (!date || !machine || !existing) return;
+  const localOnly = dateIsDemoOnly(date);
+  appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true, _demo: localOnly }, { renderAfter: false });
+  state.editingMachineId = machineId;
+  saveState();
+  render();
+  renderDateModal();
+  setSyncNote("Entry deleted");
 }
 
 function saveDateModal() {
@@ -689,7 +721,7 @@ function mergeMachines(incoming) {
 }
 
 function mergeLogs(incoming) {
-  const byId = new Map(state.logs.map((log) => [log.id, log]));
+  const byId = new Map(state.logs.filter((log) => !log._demo).map((log) => [log.id, log]));
   incoming.forEach((log) => {
     if (log.id) byId.set(log.id, { ...log, date: normalizeDate(log.date) });
   });
@@ -883,6 +915,13 @@ function bindEvents() {
   els.dateBackdrop.addEventListener("click", closeDateModal);
   els.workoutBackdrop.addEventListener("click", closeWorkoutModal);
   els.editDate.addEventListener("change", renderDateModal);
+  els.dayMachineList.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-delete-day-entry]");
+    if (deleteButton) {
+      event.stopPropagation();
+      deleteDayEntry(deleteButton.dataset.deleteDayEntry);
+    }
+  });
   window.addEventListener("resize", () => updateTableWidth());
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) syncAfterReturn();
@@ -912,6 +951,13 @@ function bindEvents() {
     if (event.target.closest("[data-open-workout]")) {
       event.stopPropagation();
       openWorkoutModal();
+      return;
+    }
+
+    const historyEntry = event.target.closest("[data-open-entry-date]");
+    if (historyEntry) {
+      event.stopPropagation();
+      openDateModal(historyEntry.dataset.openEntryDate, historyEntry.dataset.openEntryMachine);
       return;
     }
 

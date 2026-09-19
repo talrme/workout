@@ -393,6 +393,13 @@ button { cursor: pointer; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
+.history-entry-button:hover {
+  background: #fff8df;
+  border-color: rgba(49, 120, 92, 0.45);
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+
 .done-pill {
   grid-auto-flow: column;
   gap: 5px;
@@ -698,10 +705,37 @@ button.primary {
   gap: 8px;
 }
 
+.day-machine.is-focused {
+  border-color: rgba(49, 120, 92, 0.62);
+  background: #f7fbef;
+  box-shadow: inset 4px 0 0 rgba(49, 120, 92, 0.32);
+}
+
+.day-machine-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .day-machine h3 {
   margin: 0;
   font-size: 1rem;
   line-height: 1.1;
+}
+
+.entry-delete-button {
+  min-height: 30px;
+  padding: 0 9px;
+  border-color: rgba(216, 74, 60, 0.38);
+  background: #fff7f4;
+  color: var(--red);
+  font-size: 0.72rem;
+}
+
+.entry-delete-button:hover {
+  border-color: var(--red);
+  background: #fff1eb;
 }
 
 .day-fields {

@@ -57,9 +57,10 @@ Current table behavior reuses the existing backend without requiring a new Apps 
 - Deleting today's value also appends a log row, but with `note` set to `__WORKOUT_DELETE__` and blank `weight`. The frontend treats that marker as an empty machine/date. This keeps deletion compatible with the original append-only `logSet` action.
 - Auto sync is frontend-only: the app syncs on page open, when returning to the foreground, and for a two-minute catch-up window after opening or saving. During that short window it checks every 15 seconds, then stops. Save responses also merge the returned backend snapshot.
 - `config.js.defaultBackendUrl` is authoritative on load, so stale localStorage backend URLs do not strand a browser on an old backend.
-- Sample rows have `_demo: true`, use IDs beginning with `demo-week-`, and are skipped by `syncLog`, so they stay local and never write to the Sheet.
+- Sample rows have `_demo: true`, use IDs beginning with `demo-week-`, and are skipped by `syncLog`, so they stay local and never write to the Sheet. When a real backend is configured or synced, demo rows are removed from local state so they cannot mix with real backend rows.
 - Whole-day edits use `appendLogForDate`, which writes the same log shape as today's quick log but with the selected date.
 - Whole-day delete appends one deletion marker per default machine for that date.
+- Previous-day value chips open the day editor focused on that machine; the per-machine Delete button appends the same deletion marker for that one machine/date.
 - Suggested workout highlighting is frontend-only: a row is highlighted when its machine is absent from the last 3 workout dates that have any visible logged value.
 - When editing/deleting a day that contains only `_demo` sample logs, the new rows are also marked `_demo` so sample tinkering stays local.
 - The `hideTodayNotes` setting lives only in localStorage and does not require backend support.

@@ -25,6 +25,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Subtle today's notes under logged values, with a local setting to hide them from the table
 - Expandable machine details for setup notes, today's weight, today's note, and deleting today's entry
 - Clickable date headers for editing or deleting a whole workout day
+- Clickable previous-day values for editing or deleting one machine entry on that date
 - A small right-side `Add Day` button for adding a different date, such as yesterday
 - Gentle suggested workout highlighting when a machine has not been done in the last 3 workout days
 - A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, or Other
@@ -120,6 +121,8 @@ If you create a new backend later:
 4. Commit and push the site.
 
 The app should then sync with the Google Sheet.
+
+When a real backend is configured, sample/demo rows are stripped from local state during load and sync so placeholder history cannot mix into real Sheet data.
 
 ## What Happens After That
 

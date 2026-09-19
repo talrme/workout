@@ -763,7 +763,7 @@ button.primary {
   :root {
     --machine-col-width: 132px;
     --date-col-width: 92px;
-    --add-day-col-width: 76px;
+    --add-day-col-width: 52px;
   }
 
   .app-shell {
@@ -806,19 +806,24 @@ button.primary {
   }
 
   .add-day-button {
-    min-height: 32px;
-    padding: 0 6px;
-    gap: 4px;
+    width: 34px;
+    min-height: 34px;
+    margin: 0 auto;
+    padding: 0;
+    border-radius: 50%;
+    gap: 0;
   }
 
   .add-day-button span {
-    width: 17px;
-    min-height: 17px;
-    font-size: 0.78rem;
+    width: auto;
+    min-height: auto;
+    border: 0;
+    border-radius: 0;
+    font-size: 1rem;
   }
 
   .add-day-button small {
-    font-size: 0.52rem;
+    display: none;
   }
 
   .today-note {

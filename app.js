@@ -145,7 +145,7 @@ function updateTableWidth(dateCount = displayDates().length) {
   const compact = window.matchMedia("(max-width: 760px)").matches;
   const machineWidth = compact ? 132 : 250;
   const dateWidth = compact ? 92 : 108;
-  const addDayWidth = compact ? 78 : 92;
+  const addDayWidth = compact ? 52 : 92;
   els.machineTableEl.style.setProperty("--table-target-width", `${machineWidth + (dateCount * dateWidth) + addDayWidth}px`);
 }
 

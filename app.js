@@ -5,6 +5,7 @@ const DEMO_DAYS = 6;
 const DEMO_LOG_PREFIX = "demo-week-";
 const DELETE_MARKER = "__WORKOUT_DELETE__";
 const GROUP_ORDER = ["Legs", "Upper body", "Core", "Other"];
+const SYNC_INTERVAL_MS = 15000;
 
 const DEFAULT_MACHINES = [
   { id: "leg-press", name: "Leg Press", group: "Legs", seedWeight: 180, setupNotes: "Seat comfortable, knees tracking straight." },
@@ -30,6 +31,9 @@ const state = {
     hideTodayNotes: false
   }
 };
+
+let syncTimer = 0;
+let syncInFlight = false;
 
 const els = {
   tableHead: document.querySelector("[data-table-head]"),
@@ -65,13 +69,13 @@ function loadState() {
     if (Array.isArray(saved.machines) && saved.machines.length) state.machines = mergeMachines(saved.machines);
     if (Array.isArray(saved.logs)) state.logs = saved.logs;
     Object.assign(state.settings, saved.settings || {});
-    if (!state.settings.backendUrl && window.WORKOUT_CONFIG?.defaultBackendUrl) {
-      state.settings.backendUrl = window.WORKOUT_CONFIG.defaultBackendUrl;
-      state.settings.autoSync = window.WORKOUT_CONFIG.autoSync ?? state.settings.autoSync;
-    }
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
+  if (window.WORKOUT_CONFIG?.defaultBackendUrl) {
+    state.settings.backendUrl = window.WORKOUT_CONFIG.defaultBackendUrl;
+  }
+  state.settings.autoSync = state.settings.autoSync ?? window.WORKOUT_CONFIG?.autoSync ?? true;
   if (!state.logs.length) state.logs = createDemoLogs();
 }
 
@@ -515,36 +519,36 @@ function deleteDateModal() {
   setSyncNote("Day deleted");
 }
 
-async function syncNow() {
+async function syncNow(options = {}) {
   if (!state.settings.backendUrl) {
-    setSyncNote("Saved locally");
+    if (!options.quiet) setSyncNote("Saved locally");
     return;
   }
-  setSyncNote("Syncing...");
+  if (syncInFlight) return;
+  syncInFlight = true;
+  if (!options.quiet) setSyncNote("Syncing...");
   try {
     const response = await backendRequest("snapshot");
     if (response && response.ok) {
-      if (Array.isArray(response.machines) && response.machines.length) {
-        state.machines = mergeMachines(response.machines);
-      }
-      if (Array.isArray(response.logs)) {
-        state.logs = mergeLogs(response.logs);
-      }
-      saveState();
-      render();
-      setSyncNote("Synced");
-    } else {
+      applySnapshot(response, { renderAfter: true });
+      if (!options.quiet) setSyncNote("Synced");
+    } else if (!options.quiet) {
       setSyncNote("Sync issue");
     }
   } catch (error) {
     console.warn(error);
-    setSyncNote("Offline");
+    if (!options.quiet) setSyncNote("Offline");
+  } finally {
+    syncInFlight = false;
   }
 }
 
 function syncMachine(machine) {
   if (!state.settings.backendUrl) return;
-  backendRequest("saveMachine", { machine }).then(() => setSyncNote("Synced")).catch((error) => {
+  backendRequest("saveMachine", { machine }).then((response) => {
+    if (response?.ok) applySnapshot(response, { renderAfter: true });
+    setSyncNote(response?.ok ? "Synced" : "Sync issue");
+  }).catch((error) => {
     console.warn(error);
     setSyncNote("Saved locally");
   });
@@ -553,10 +557,24 @@ function syncMachine(machine) {
 function syncLog(log) {
   if (log._demo) return;
   if (!state.settings.backendUrl) return;
-  backendRequest("logSet", { log }).then(() => setSyncNote("Synced")).catch((error) => {
+  backendRequest("logSet", { log }).then((response) => {
+    if (response?.ok) applySnapshot(response, { renderAfter: true });
+    setSyncNote(response?.ok ? "Synced" : "Sync issue");
+  }).catch((error) => {
     console.warn(error);
     setSyncNote("Saved locally");
   });
+}
+
+function applySnapshot(response, options = {}) {
+  if (Array.isArray(response.machines) && response.machines.length) {
+    state.machines = mergeMachines(response.machines);
+  }
+  if (Array.isArray(response.logs)) {
+    state.logs = mergeLogs(response.logs);
+  }
+  saveState();
+  if (options.renderAfter !== false) render();
 }
 
 function backendRequest(action, payload = {}) {
@@ -694,6 +712,17 @@ function setIdleSyncNote() {
   setSyncNote(state.settings.autoSync ? "Ready" : "Sync off");
 }
 
+function startAutoSync() {
+  window.clearInterval(syncTimer);
+  if (!state.settings.autoSync || !state.settings.backendUrl) return;
+  syncTimer = window.setInterval(() => syncNow({ quiet: true }), SYNC_INTERVAL_MS);
+}
+
+function stopAutoSync() {
+  window.clearInterval(syncTimer);
+  syncTimer = 0;
+}
+
 function openSettings() {
   els.settingsBackdrop.hidden = false;
   els.settingsModal.hidden = false;
@@ -714,8 +743,13 @@ function saveSettings() {
   saveState();
   closeSettings();
   render();
-  if (state.settings.autoSync) syncNow();
-  else setIdleSyncNote();
+  if (state.settings.autoSync) {
+    syncNow();
+    startAutoSync();
+  } else {
+    stopAutoSync();
+    setIdleSyncNote();
+  }
 }
 
 function resetSite() {
@@ -774,6 +808,9 @@ function bindEvents() {
   els.workoutBackdrop.addEventListener("click", closeWorkoutModal);
   els.editDate.addEventListener("change", renderDateModal);
   window.addEventListener("resize", () => updateTableWidth());
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && state.settings.autoSync) syncNow({ quiet: true });
+  });
 
   els.tableHead.addEventListener("click", (event) => {
     const openDateButton = event.target.closest("[data-open-date]");
@@ -843,8 +880,12 @@ function init() {
   loadState();
   bindEvents();
   render();
-  if (state.settings.autoSync) syncNow();
-  else setIdleSyncNote();
+  if (state.settings.autoSync) {
+    syncNow();
+    startAutoSync();
+  } else {
+    setIdleSyncNote();
+  }
 }
 
 init();

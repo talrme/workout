@@ -29,10 +29,9 @@ The app shows:
 - The latest logged weight per machine/date
 - Date headers show a subtle day/date pair, such as `Today` over `9/14`, rather than completion counts
 - A soft checkmark in today's column that repeats the previous logged weight
-- A green checked weight after today's set is logged; clicking it opens the editor
-- Logged values include a small clear button that appends the normal deletion marker and toggles that machine off for today
+- A green checked weight after today's set is logged; clicking it opens the editor and selects today's value
 - Subtle today's notes under logged values, controlled by the browser-local `hideTodayNotes` setting
-- Accordion details per machine for setup notes, today's weight, today's note, and deleting today's entry
+- Accordion details per machine for setup notes, today's weight, today's note, and removing today's entry
 - Date headers open a whole-day editor for all machine weights/notes on that date
 - A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
 - A bottom `Add workout` row creates custom rows with a section, value label, default value, and setup notes

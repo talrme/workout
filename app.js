@@ -181,7 +181,7 @@ function machineRow(machine, dates, suggestedIds = new Set()) {
         if (date === today) {
           const previous = previousWeight(machine.id, today) || defaultValue(machine);
           if (log?.weight) {
-            return `<td class="today-cell"><div class="today-logged"><button type="button" class="done-pill" data-expand="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button><button type="button" class="clear-today-button" data-delete-today="${escapeHtml(machine.id)}" aria-label="Clear today's ${escapeHtml(machine.name)}">×</button>${todayNoteHtml(log)}</div></td>`;
+            return `<td class="today-cell"><div class="today-logged"><button type="button" class="done-pill" data-edit-today="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button>${todayNoteHtml(log)}</div></td>`;
           }
           return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }
@@ -235,7 +235,7 @@ function detailRow(machine, colspan) {
           </label>
           <div class="detail-actions">
             <button type="button" class="primary" data-save-detail="${escapeHtml(machine.id)}">Save</button>
-            ${todayLog ? `<button type="button" class="danger" data-delete-today="${escapeHtml(machine.id)}">Delete today</button>` : ""}
+            ${todayLog ? `<button type="button" class="danger" data-remove-today="${escapeHtml(machine.id)}">Remove</button>` : ""}
             <button type="button" data-close-detail>Close</button>
           </div>
         </div>
@@ -355,10 +355,24 @@ function inputAttributes(machine) {
   return `type="number" min="0" step="5" inputmode="decimal"`;
 }
 
-function toggleMachine(machineId) {
-  state.expandedId = state.expandedId === machineId ? "" : machineId;
+function selectTodayWeight(machineId) {
+  window.setTimeout(() => {
+    const input = document.querySelector(`[data-detail-panel="${CSS.escape(machineId)}"] [data-today-weight]`);
+    input?.focus();
+    input?.select();
+  }, 0);
+}
+
+function openMachineDetail(machineId, options = {}) {
+  const shouldCollapse = state.expandedId === machineId && !options.focusWeight;
+  state.expandedId = shouldCollapse ? "" : machineId;
   saveState();
   render();
+  if (!shouldCollapse && options.focusWeight) selectTodayWeight(machineId);
+}
+
+function toggleMachine(machineId) {
+  openMachineDetail(machineId);
 }
 
 function quickRepeat(machineId) {
@@ -366,9 +380,7 @@ function quickRepeat(machineId) {
   if (!machine) return;
   const weight = previousWeight(machineId, isoDate(new Date())) || defaultValue(machine);
   if (!weight) {
-    state.expandedId = machineId;
-    saveState();
-    render();
+    openMachineDetail(machineId, { focusWeight: true });
     return;
   }
   appendTodayLog(machine, { weight, note: "" });
@@ -392,14 +404,19 @@ function saveDetail(machineId) {
   syncMachine(updatedMachine);
 }
 
-function deleteToday(machineId) {
+function removeToday(machineId) {
   const machine = state.machines.find((item) => item.id === machineId);
   const todayLog = latestLogFor(machineId, isoDate(new Date()));
   if (!machine || !todayLog) return;
-  appendTodayLog(machine, { weight: "", note: DELETE_MARKER, deleted: true });
+  appendTodayLog(machine, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
+  state.expandedId = "";
+  saveState();
+  render();
+  setSyncNote("Removed");
 }
 
 function openWorkoutModal() {
+  closeExpandedDetail();
   els.workoutName.value = "";
   els.workoutGroup.value = "Legs";
   els.workoutValueLabel.value = "Weight";
@@ -482,8 +499,12 @@ function appendLogForDate(machine, date, values, options = {}) {
 }
 
 function openDateModal(date, focusMachineId = "") {
+  const hadExpandedDetail = Boolean(state.expandedId);
+  state.expandedId = "";
   state.editingDate = normalizeDate(date) || isoDate(new Date());
   state.editingMachineId = focusMachineId;
+  saveState();
+  if (hadExpandedDetail) render();
   els.editDate.value = state.editingDate;
   renderDateModal();
   els.dateBackdrop.hidden = false;
@@ -775,6 +796,13 @@ function syncAfterReturn() {
   triggerAutoSync({ quiet: true });
 }
 
+function closeExpandedDetail() {
+  if (!state.expandedId) return;
+  state.expandedId = "";
+  saveState();
+  render();
+}
+
 function openSettings() {
   els.settingsBackdrop.hidden = false;
   els.settingsModal.hidden = false;
@@ -871,6 +899,11 @@ function bindEvents() {
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) syncAfterReturn();
   });
+  document.addEventListener("click", (event) => {
+    if (!state.expandedId) return;
+    if (event.target.closest("[data-detail-panel], .settings-modal, .date-modal, .workout-modal")) return;
+    closeExpandedDetail();
+  });
 
   els.tableHead.addEventListener("click", (event) => {
     const openDateButton = event.target.closest("[data-open-date]");
@@ -909,6 +942,13 @@ function bindEvents() {
       return;
     }
 
+    const editTodayButton = event.target.closest("[data-edit-today]");
+    if (editTodayButton) {
+      event.stopPropagation();
+      openMachineDetail(editTodayButton.dataset.editToday, { focusWeight: true });
+      return;
+    }
+
     const saveButton = event.target.closest("[data-save-detail]");
     if (saveButton) {
       event.stopPropagation();
@@ -916,10 +956,10 @@ function bindEvents() {
       return;
     }
 
-    const deleteButton = event.target.closest("[data-delete-today]");
-    if (deleteButton) {
+    const removeButton = event.target.closest("[data-remove-today]");
+    if (removeButton) {
       event.stopPropagation();
-      deleteToday(deleteButton.dataset.deleteToday);
+      removeToday(removeButton.dataset.removeToday);
       return;
     }
 
@@ -939,7 +979,10 @@ function bindEvents() {
     }
 
     const row = event.target.closest("[data-machine-row]");
-    if (row) toggleMachine(row.dataset.machineRow);
+    if (row) {
+      event.stopPropagation();
+      toggleMachine(row.dataset.machineRow);
+    }
   });
 }
 

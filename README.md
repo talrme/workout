@@ -20,10 +20,9 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Recent weights for each machine/date
 - Date headers that quietly show the day label and date, like `Today` and `9/14`
 - A soft checkmark for quickly logging today's set at the previous weight
-- A green checked weight once today's set has been logged
-- A small clear button on logged values to toggle that machine back off for today
+- A green checked weight once today's set has been logged; tapping it opens the editor with today's value selected
 - Subtle today's notes under logged values, with a local setting to hide them from the table
-- Expandable machine details for setup notes, today's weight, today's note, and deleting today's entry
+- Expandable machine details for setup notes, today's weight, today's note, and removing today's entry
 - Clickable date headers for editing or deleting a whole workout day
 - Clickable previous-day values for editing or deleting one machine entry on that date
 - A small right-side `Add Day` button for adding a different date, such as yesterday

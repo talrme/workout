@@ -13,7 +13,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 
 ## What The App Shows
 
-- Seven machines plus planks, grouped into legs, upper body, and core
+- Seven machines plus planks, grouped into legs, upper body, core, and physical therapy
 - A compact table of recent workout dates
 - Dates displayed newest-to-oldest, with `Today` first for easier phone use
 - One row per machine
@@ -27,7 +27,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Clickable previous-day values for editing or deleting one machine entry on that date
 - A small right-side `Add Day` button for adding a different date, such as yesterday
 - Gentle suggested workout highlighting when a machine has not been done in the last 3 workout days
-- A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, or Other
+- A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, Physical therapy, or Other
 - A home-screen icon via `dumbbell.png` and `manifest.webmanifest`
 - Automatic Google Sheet sync on page open, when the page returns to the foreground, and for a short catch-up window after opening or saving
 

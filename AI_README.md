@@ -23,7 +23,7 @@ GitHub repo: https://github.com/talrme/workout
 
 The app shows:
 
-- Seven workout machines plus planks, grouped into legs, upper body, and core
+- Seven workout machines plus planks, grouped into legs, upper body, core, and physical therapy
 - A compact table with recent dates as columns
 - Dates render newest-to-oldest, with `Today` as the first date column so phone users see the action column immediately
 - The latest logged weight per machine/date
@@ -34,7 +34,7 @@ The app shows:
 - Accordion details per machine for setup notes, today's weight, today's note, and removing today's entry
 - Date headers open a whole-day editor for all machine weights/notes on that date
 - A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
-- A bottom `Add workout` row creates custom rows with a section, value label, default value, and setup notes
+- A bottom `Add workout` row creates custom rows with a section, starting weight, and setup notes
 - `dumbbell.png` plus `manifest.webmanifest` provide the favicon and phone/home-screen icon
 
 The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs. Plank duration is stored in the existing `weight` field as a display string such as `30s`, while the UI labels that row as `Time`.

@@ -34,7 +34,10 @@
     </section>
 
     <footer class="sheet-footer">
-      <span class="sync-pill" data-sync-note>Loading sheet...</span>
+      <div class="footer-copy">
+        <span class="sync-pill" data-sync-note>Loading sheet...</span>
+        <p class="training-note"><strong>Goal:</strong> last reps around RPE 7 -> 8 -> 9 across sets, about 3, 2, then 1 clean rep left.</p>
+      </div>
       <a data-sheet-link href="https://docs.google.com/spreadsheets/d/1iOg845q_IxXqVDmVxSjuRTdEVA19JaLvECDnTK-BL3Y/edit?gid=868528902#gid=868528902" target="_blank" rel="noreferrer">Google Sheet</a>
     </footer>
   </main>
@@ -116,18 +119,12 @@
             <option>Legs</option>
             <option>Upper body</option>
             <option>Core</option>
+            <option>Physical therapy</option>
             <option>Other</option>
           </select>
         </label>
         <label>
-          <span>Value label</span>
-          <select data-workout-value-label>
-            <option>Weight</option>
-            <option>Time</option>
-          </select>
-        </label>
-        <label>
-          <span>Default value</span>
+          <span>Starting weight</span>
           <input data-workout-default type="text" placeholder="50">
         </label>
       </div>

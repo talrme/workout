@@ -2,7 +2,7 @@ const STORAGE_KEY = "workout-sheet-prototype-v2";
 const OLD_STORAGE_KEY = "workout-sheet-prototype-v1";
 const HISTORY_COLUMNS = 5;
 const DELETE_MARKER = "__WORKOUT_DELETE__";
-const GROUP_ORDER = ["Legs", "Upper body", "Core", "Other"];
+const GROUP_ORDER = ["Legs", "Upper body", "Core", "Physical therapy", "Other"];
 const SYNC_INTERVAL_MS = 15000;
 const SYNC_BURST_DURATION_MS = 2 * 60 * 1000;
 
@@ -59,7 +59,6 @@ const els = {
   workoutModal: document.querySelector("[data-workout-modal]"),
   workoutName: document.querySelector("[data-workout-name]"),
   workoutGroup: document.querySelector("[data-workout-group]"),
-  workoutValueLabel: document.querySelector("[data-workout-value-label]"),
   workoutDefault: document.querySelector("[data-workout-default]"),
   workoutSetup: document.querySelector("[data-workout-setup]")
 };
@@ -168,12 +167,13 @@ function groupRank(group) {
 function machineRow(machine, dates, suggestedIds = new Set()) {
   const today = isoDate(new Date());
   const isSuggested = suggestedIds.has(machine.id);
+  const setupPreview = String(machine.setupNotes || "").trim();
   return `
     <tr class="machine-row ${state.expandedId === machine.id ? "is-open" : ""} ${isSuggested ? "is-suggested" : ""}" data-machine-row="${escapeHtml(machine.id)}" ${isSuggested ? `title="${escapeHtml(machine.name)} has not been done in the last 3 workout days"` : ""}>
       <th scope="row">
         <button type="button" class="machine-name" data-expand="${escapeHtml(machine.id)}" aria-expanded="${state.expandedId === machine.id}">
           <span>${escapeHtml(machine.name)}</span>
-          <small>${escapeHtml(machine.setupNotes || "Add setup notes")}</small>
+          ${setupPreview ? `<small class="setup-preview" title="${escapeHtml(setupPreview)}">${escapeHtml(setupPreview)}</small>` : ""}
         </button>
       </th>
       ${dates.map((date) => {
@@ -365,7 +365,15 @@ function selectTodayWeight(machineId) {
 
 function openMachineDetail(machineId, options = {}) {
   const shouldCollapse = state.expandedId === machineId && !options.focusWeight;
-  state.expandedId = shouldCollapse ? "" : machineId;
+  if (shouldCollapse) {
+    saveDetail(machineId);
+    return;
+  }
+  const previousExpandedId = state.expandedId;
+  if (previousExpandedId && previousExpandedId !== machineId) {
+    saveDetail(previousExpandedId, { renderAfter: false });
+  }
+  state.expandedId = machineId;
   saveState();
   render();
   if (!shouldCollapse && options.focusWeight) selectTodayWeight(machineId);
@@ -386,7 +394,7 @@ function quickRepeat(machineId) {
   appendTodayLog(machine, { weight, note: "" });
 }
 
-function saveDetail(machineId) {
+function saveDetail(machineId, options = {}) {
   const machine = state.machines.find((item) => item.id === machineId);
   const panel = document.querySelector(`[data-detail-panel="${CSS.escape(machineId)}"]`);
   if (!machine || !panel) return;
@@ -394,14 +402,18 @@ function saveDetail(machineId) {
   const setupNotes = panel.querySelector("[data-setup-notes]").value.trim();
   const weight = panel.querySelector("[data-today-weight]").value.trim();
   const note = panel.querySelector("[data-today-note]").value.trim();
+  const todayLog = latestLogFor(machineId, isoDate(new Date()));
   const updatedMachine = { ...machine, setupNotes };
+  const setupChanged = setupNotes !== String(machine.setupNotes || "");
+  const logChanged = Boolean(weight || note)
+    && (String(todayLog?.weight || "") !== weight || String(todayLog?.note || "") !== note);
 
   state.machines = state.machines.map((item) => item.id === machineId ? updatedMachine : item);
-  if (weight) appendTodayLog(updatedMachine, { weight, note }, { renderAfter: false });
+  if (logChanged) appendTodayLog(updatedMachine, { weight, note }, { renderAfter: false });
   state.expandedId = "";
   saveState();
-  render();
-  syncMachine(updatedMachine);
+  if (options.renderAfter !== false) render();
+  if (setupChanged) syncMachine(updatedMachine);
 }
 
 function removeToday(machineId) {
@@ -419,7 +431,6 @@ function openWorkoutModal() {
   closeExpandedDetail();
   els.workoutName.value = "";
   els.workoutGroup.value = "Legs";
-  els.workoutValueLabel.value = "Weight";
   els.workoutDefault.value = "";
   els.workoutSetup.value = "";
   els.workoutBackdrop.hidden = false;
@@ -445,7 +456,7 @@ function saveWorkoutModal() {
     id: uniqueMachineId(name),
     name,
     group: els.workoutGroup.value || "Other",
-    valueLabel: els.workoutValueLabel.value === "Time" ? "Time" : "Weight",
+    valueLabel: "Weight",
     seedWeight: defaultValueText,
     targetWeight: defaultValueText,
     setupNotes: els.workoutSetup.value.trim(),
@@ -664,7 +675,7 @@ function applySnapshot(response, options = {}) {
     state.logs = mergeLogs(response.logs);
   }
   saveState();
-  if (options.renderAfter !== false) render();
+  if (options.renderAfter !== false) renderAfterSnapshot();
 }
 
 function backendRequest(action, payload = {}) {
@@ -798,8 +809,18 @@ function syncAfterReturn() {
 
 function closeExpandedDetail() {
   if (!state.expandedId) return;
-  state.expandedId = "";
-  saveState();
+  saveDetail(state.expandedId);
+}
+
+function isEditingExpandedDetail() {
+  const active = document.activeElement;
+  return Boolean(active?.closest?.("[data-detail-panel]"));
+}
+
+function renderAfterSnapshot() {
+  if (isEditingExpandedDetail()) {
+    return;
+  }
   render();
 }
 
@@ -965,9 +986,7 @@ function bindEvents() {
 
     if (event.target.closest("[data-close-detail]")) {
       event.stopPropagation();
-      state.expandedId = "";
-      saveState();
-      render();
+      closeExpandedDetail();
       return;
     }
 

@@ -28,7 +28,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - A small right-side `Add Day` button for adding a different date, such as yesterday
 - Gentle suggested workout highlighting when a machine has not been done in the last 3 workout days
 - A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, or Other
-- A home-screen icon via `workout-icon.png` and `manifest.webmanifest`
+- A home-screen icon via `dumbbell.png` and `manifest.webmanifest`
 - Automatic Google Sheet sync on page open, when the page returns to the foreground, and for a short catch-up window after opening or saving
 
 The current UI keeps logging intentionally simple: a value plus an optional note. For machines, that value is weight; for planks, it is time, like `30s`. The backend can still accept older fields like reps, effort, and reps in reserve, but the website no longer shows them.

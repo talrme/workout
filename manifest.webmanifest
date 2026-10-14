@@ -7,7 +7,7 @@
   "theme_color": "#f4f7ef",
   "icons": [
     {
-      "src": "workout-icon.png",
+      "src": "dumbbell.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

@@ -15,7 +15,7 @@ GitHub repo: https://github.com/talrme/workout
 - `styles.css`: phone-friendly styling
 - `app.js`: local state, JSONP sync, rendering, and interactions
 - `backend.sample.gs`: copy-paste Google Apps Script backend
-- `icon.svg`: app icon
+- `dumbbell.png`: favicon and phone/home-screen icon
 - `README.md`: human setup guide
 - `AI_README.md`: implementation notes for future Codex passes
 
@@ -35,7 +35,7 @@ The app shows:
 - Date headers open a whole-day editor for all machine weights/notes on that date
 - A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
 - A bottom `Add workout` row creates custom rows with a section, value label, default value, and setup notes
-- `workout-icon.png` plus `manifest.webmanifest` provide the phone/home-screen icon
+- `dumbbell.png` plus `manifest.webmanifest` provide the favicon and phone/home-screen icon
 
 The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs. Plank duration is stored in the existing `weight` field as a display string such as `30s`, while the UI labels that row as `Time`.
 

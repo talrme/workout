@@ -28,6 +28,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Settings at the bottom, opening in a vertically centered dialog with keyboard focus containment and Escape support
 - Garden, Tide, Moon, and Sunrise color schemes, plus separate controls for workout notes and setup previews
 - Advanced settings for profile name, auto sync, reduced motion, Google Sheet link, sync status, and Reset local
+- Highlight missed workouts is enabled by default and can be disabled in Settings. It flags exercises missing from all of the last three distinct workout days with visible logs; fewer than three days do not trigger highlights. Disabling it hides both highlights and their legend.
 - Preferences persist on this device; theme choices preview and save immediately, while the Save button applies the other settings
 - The new dumbbell PNG supplies the favicon and phone icon
 - Existing Google Sheet synchronization on open, return to foreground, and short catch-up windows after saving

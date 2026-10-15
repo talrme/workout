@@ -9,7 +9,7 @@
   <link rel="icon" href="dumbell-2.png?v=20261014" type="image/png">
   <link rel="apple-touch-icon" href="dumbell-2.png?v=20261014">
   <link rel="manifest" href="manifest.webmanifest?v=20261014-dumbbell-2">
-  <link rel="stylesheet" href="styles.css?v=20261014-workout-refresh">
+  <link rel="stylesheet" href="styles.css?v=20261014-missed-workouts">
 </head>
 <body>
   <main class="app-shell">
@@ -61,6 +61,7 @@
       </fieldset>
       <label class="toggle-row"><span>Show workout notes</span><input type="checkbox" data-show-notes></label>
       <label class="toggle-row"><span>Show setup notes in table</span><input type="checkbox" data-show-setup></label>
+      <label class="toggle-row"><span>Highlight missed workouts<small class="setting-help">Not done in your last 3 workout days.</small></span><input type="checkbox" data-highlight-missed></label>
       <details class="advanced-settings">
         <summary>Advanced settings</summary>
         <div class="advanced-panel">
@@ -118,6 +119,6 @@
   </section>
 
   <script src="config.js?v=20260918-mobile-add-day"></script>
-  <script src="app.js?v=20261014-workout-refresh"></script>
+  <script src="app.js?v=20261014-missed-workouts"></script>
 </body>
 </html>

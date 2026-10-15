@@ -31,6 +31,7 @@ const state = {
     reduceMotion: false,
     hideTodayNotes: false,
     showSetupNotes: true,
+    highlightMissedWorkouts: true,
     theme: "garden"
   }
 };
@@ -52,6 +53,7 @@ const els = {
   reduceMotion: document.querySelector("[data-reduce-motion]"),
   showNotes: document.querySelector("[data-show-notes]"),
   showSetup: document.querySelector("[data-show-setup]"),
+  highlightMissed: document.querySelector("[data-highlight-missed]"),
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
   settingsModal: document.querySelector("[data-settings-modal]"),
   workoutBackdrop: document.querySelector("[data-workout-backdrop]"),
@@ -104,6 +106,7 @@ function renderSettings() {
   els.reduceMotion.checked = Boolean(state.settings.reduceMotion);
   els.showNotes.checked = !state.settings.hideTodayNotes;
   els.showSetup.checked = state.settings.showSetupNotes;
+  els.highlightMissed.checked = state.settings.highlightMissedWorkouts;
   document.querySelectorAll("button[data-theme]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.theme === state.settings.theme)));
 }
 
@@ -305,6 +308,7 @@ function recentWorkoutDates(limit, machines) {
 }
 
 function suggestedWorkoutInfo(machines) {
+  if (!state.settings.highlightMissedWorkouts) return { recentDates: [], suggestedIds: new Set() };
   const recentDates = recentWorkoutDates(3, machines);
   const suggestedIds = new Set();
   if (recentDates.length >= 3) {
@@ -817,6 +821,7 @@ function saveSettings() {
   state.settings.reduceMotion = els.reduceMotion.checked;
   state.settings.hideTodayNotes = !els.showNotes.checked;
   state.settings.showSetupNotes = els.showSetup.checked;
+  state.settings.highlightMissedWorkouts = els.highlightMissed.checked;
   saveState();
   closeSettings();
   render();

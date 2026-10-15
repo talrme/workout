@@ -1098,3 +1098,5 @@ body[data-theme="sunrise"] {
   .settings-panel { max-height: calc(100dvh - 24px); }
   .table-add-buttons .add-workout-button { padding: 0 8px; font-size: 0.8rem; }
 }
+
+.setting-help { display: block; margin-top: 5px; font-size: 0.7rem; line-height: 1.4; font-weight: 550; text-transform: none; color: var(--muted); }

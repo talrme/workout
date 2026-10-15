@@ -35,9 +35,12 @@ const state = {
   expandedId: "",
   expandedDate: "",
   extraDates: [],
+  archivedMachineIds: [],
   settings: { ...DEFAULT_SETTINGS }
 };
 
+let pendingArchiveId = "";
+let undoArchiveId = "";
 let syncTimer = 0;
 let syncInFlight = false;
 let syncBurstEndsAt = 0;
@@ -71,6 +74,7 @@ function loadState() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY) || "{}");
     if (Array.isArray(saved.machines) && saved.machines.length) state.machines = mergeMachines(saved.machines);
     if (Array.isArray(saved.logs)) state.logs = saved.logs;
+    if (Array.isArray(saved.archivedMachineIds)) state.archivedMachineIds = [...new Set(saved.archivedMachineIds.filter(id => typeof id === "string"))];
     if (Array.isArray(saved.extraDates)) state.extraDates = saved.extraDates.filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date));
     Object.assign(state.settings, saved.settings || {});
   } catch {
@@ -92,6 +96,7 @@ function render() {
   if (window.WORKOUT_CONFIG?.sheetUrl) els.sheetLink.href = window.WORKOUT_CONFIG.sheetUrl;
   if (els.settingsModal.hidden) renderSettings();
   renderMachineTable();
+  renderArchivedWorkouts();
   document.body.classList.toggle("detail-open", Boolean(state.expandedId));
 }
 
@@ -121,7 +126,7 @@ function renderMachineTable() {
   renderSuggestionLegend(suggestionInfo);
   els.tableHead.innerHTML = `
     <tr>
-      <th scope="col" class="machine-col">Machine</th>
+      <th scope="col" class="machine-col" aria-label="Workout"></th>
       ${dates.map((date) => `
         <th scope="col" class="date-col" data-column-date="${escapeHtml(date)}">
           <div class="date-head">
@@ -149,6 +154,7 @@ function renderMachineTable() {
     rows.push(machineRow(machine, dates, suggestionInfo.suggestedIds));
     if (state.expandedId === machine.id) rows.push(detailRow(machine, dates.length + 2));
   });
+  if (!machines.length) rows.push(`<tr><td class="empty-workouts" colspan="${dates.length + 2}">No active workouts. Add a workout below or restore one in Settings.</td></tr>`);
   els.machineTable.innerHTML = rows.join("");
   renderTableActions();
 }
@@ -163,7 +169,7 @@ function updateTableWidth(dateCount = displayDates().length) {
 
 function orderedMachines() {
   const order = new Map(DEFAULT_MACHINES.map((machine, index) => [machine.id, index]));
-  return state.machines.slice().sort((a, b) => {
+  return state.machines.filter(machine => !state.archivedMachineIds.includes(machine.id)).sort((a, b) => {
     const groupCompare = groupRank(a.group) - groupRank(b.group);
     if (groupCompare) return groupCompare;
     const orderCompare = (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999);
@@ -204,9 +210,52 @@ function machineRow(machine, dates, suggestedIds = new Set()) {
         }
         return `<td class="${log?.weight ? "" : "is-missing"}"><button type="button" class="history-entry-button ${log?.weight ? 'weight-chip' : 'empty-cell'}" data-open-entry-date="${escapeHtml(date)}" data-open-entry-machine="${escapeHtml(machine.id)}" aria-label="${log?.weight ? 'Edit' : 'Add'} ${escapeHtml(machine.name)} for ${escapeHtml(formatLongDate(date))}">${log?.weight ? escapeHtml(log.weight) : '–'}</button>${log ? todayNoteHtml(log) : ''}</td>`;
       }).join("")}
-      <td class="history-spacer" aria-hidden="true"></td>
+      <td class="history-spacer"><button type="button" class="archive-row-button" data-archive-workout="${escapeHtml(machine.id)}" aria-label="Archive ${escapeHtml(machine.name)}" title="Archive ${escapeHtml(machine.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7" /></svg></button></td>
     </tr>
   `;
+}
+
+function renderArchivedWorkouts() {
+  const archived = state.machines.filter(machine => state.archivedMachineIds.includes(machine.id));
+  document.querySelector("[data-archive-count]").textContent = String(archived.length);
+  document.querySelector("[data-archived-list]").innerHTML = archived.length
+    ? archived.map(machine => `<div class="archived-workout"><span>${escapeHtml(machine.name)}</span><button type="button" data-restore-workout="${escapeHtml(machine.id)}" aria-label="Restore ${escapeHtml(machine.name)}">Restore</button></div>`).join("")
+    : '<p class="setting-help">No archived workouts.</p>';
+}
+
+function openArchiveConfirmation(machineId) {
+  const machine = state.machines.find(item => item.id === machineId);
+  if (!machine || state.archivedMachineIds.includes(machineId)) return;
+  pendingArchiveId = machineId;
+  document.querySelector("[data-archive-title]").textContent = `Archive ${machine.name}?`;
+  document.querySelector("[data-archive-dialog]").showModal();
+  document.body.classList.add("is-modal-open");
+  document.querySelector("[data-cancel-archive]").focus({ preventScroll: true });
+}
+
+function confirmArchiveWorkout() {
+  const machine = state.machines.find(item => item.id === pendingArchiveId);
+  if (!machine) return;
+  if (!state.archivedMachineIds.includes(machine.id)) state.archivedMachineIds.push(machine.id);
+  if (state.expandedId === machine.id) state.expandedId = "";
+  undoArchiveId = machine.id;
+  saveState();
+  document.querySelector("[data-archive-dialog]").close();
+  render();
+  const notice = document.querySelector("[data-archive-notice]");
+  notice.querySelector("[data-archive-message]").textContent = `${machine.name} archived. History kept.`;
+  notice.hidden = false;
+  notice.querySelector("[data-undo-archive]").focus({ preventScroll: true });
+}
+
+function restoreWorkout(machineId) {
+  state.archivedMachineIds = state.archivedMachineIds.filter(id => id !== machineId);
+  if (undoArchiveId === machineId) {
+    undoArchiveId = "";
+    document.querySelector("[data-archive-notice]").hidden = true;
+  }
+  saveState();
+  render();
 }
 
 function todayNoteHtml(log) {
@@ -888,6 +937,12 @@ function bindEvents() {
   document.querySelector("[data-save-workout]").addEventListener("click", saveWorkoutModal);
   els.workoutBackdrop.addEventListener("click", closeWorkoutModal);
   els.settingsModal.addEventListener("click", event => {
+    const restore = event.target.closest("[data-restore-workout]");
+    if (restore) {
+      restoreWorkout(restore.dataset.restoreWorkout);
+      const next = els.settingsModal.querySelector("[data-restore-workout]") || els.settingsModal.querySelector("[data-archived-settings] summary");
+      next.focus({ preventScroll: true });
+    }
     if (event.target === els.settingsModal) closeSettings();
     const button = event.target.closest("button[data-theme]");
     if (button) {
@@ -896,6 +951,19 @@ function bindEvents() {
       applyAppearance();
       document.querySelectorAll("button[data-theme]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
     }
+  });
+  const archiveDialog = document.querySelector("[data-archive-dialog]");
+  document.querySelectorAll("[data-cancel-archive], [data-close-archive]").forEach(button => button.addEventListener("click", () => archiveDialog.close()));
+  document.querySelector("[data-confirm-archive]").addEventListener("click", confirmArchiveWorkout);
+  archiveDialog.addEventListener("click", event => { if (event.target === archiveDialog) archiveDialog.close(); });
+  archiveDialog.addEventListener("close", () => {
+    pendingArchiveId = "";
+    if (els.settingsModal.hidden && els.workoutModal.hidden) document.body.classList.remove("is-modal-open");
+  });
+  document.querySelector("[data-undo-archive]").addEventListener("click", () => {
+    const machineId = undoArchiveId;
+    restoreWorkout(machineId);
+    document.querySelector(`[data-archive-workout="${CSS.escape(machineId)}"]`)?.focus({ preventScroll: true });
   });
   document.addEventListener("keydown", event => {
     const modal = !els.settingsModal.hidden ? els.settingsModal : !els.workoutModal.hidden ? els.workoutModal : null;
@@ -961,6 +1029,12 @@ function bindEvents() {
   });
 
   els.machineTable.addEventListener("click", (event) => {
+    const archiveButton = event.target.closest("[data-archive-workout]");
+    if (archiveButton) {
+      event.stopPropagation();
+      openArchiveConfirmation(archiveButton.dataset.archiveWorkout);
+      return;
+    }
     if (event.target.closest("[data-open-workout]")) {
       event.stopPropagation();
       openWorkoutModal();

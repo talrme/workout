@@ -9,13 +9,14 @@
   <link rel="icon" href="dumbell-2.png?v=20261014" type="image/png">
   <link rel="apple-touch-icon" href="dumbell-2.png?v=20261014">
   <link rel="manifest" href="manifest.webmanifest?v=20261014-dumbbell-2">
-  <link rel="stylesheet" href="styles.css?v=20261014-reset-settings">
+  <link rel="stylesheet" href="styles.css?v=20261014-archive-header">
 </head>
 <body>
   <main class="app-shell">
     <header class="hero">
       <img class="hero-logo" src="dumbell-2.png?v=20261014" width="64" height="64" alt="">
       <h1>Workout</h1>
+      <img class="hero-logo hero-logo-right" src="dumbell-2.png?v=20261014" width="64" height="64" alt="">
     </header>
 
     <section class="machine-panel" aria-label="Workout machines">
@@ -26,6 +27,7 @@
         </table>
       </div>
       <div class="table-actions" data-table-actions></div>
+      <div class="archive-notice" data-archive-notice role="status" hidden><span data-archive-message></span><button type="button" data-undo-archive>Undo</button></div>
       <div class="workout-legend" data-suggestion-legend hidden>
         <span class="suggestion-swatch" aria-hidden="true"></span>
         <span><strong>Suggested workout</strong> - not done in the last 3 workout days.</span>
@@ -70,6 +72,11 @@
           <label class="toggle-row"><span>Reduce motion</span><input type="checkbox" data-reduce-motion></label>
           <a data-sheet-link href="https://docs.google.com/spreadsheets/d/1iOg845q_IxXqVDmVxSjuRTdEVA19JaLvECDnTK-BL3Y/edit" target="_blank" rel="noreferrer">Google Sheet ↗</a>
           <span class="sync-pill" data-sync-note>Loading sheet...</span>
+          <details class="archived-settings" data-archived-settings>
+            <summary>Archived workouts (<span data-archive-count>0</span>)</summary>
+            <p class="setting-help">Archived rows are hidden on this browser. Restore them here with all their history.</p>
+            <div class="archived-list" data-archived-list></div>
+          </details>
           <button type="button" class="danger" data-reset-site>Reset to default settings</button>
           <small class="setting-help">Keeps your workout history, exercises, and added dates.</small>
         </div>
@@ -119,7 +126,13 @@
     </div>
   </section>
 
+  <dialog class="archive-dialog" data-archive-dialog aria-labelledby="archive-title" aria-describedby="archive-description">
+    <div class="archive-dialog-header"><h2 id="archive-title" data-archive-title>Archive workout?</h2><button type="button" data-close-archive aria-label="Close archive confirmation">×</button></div>
+    <p id="archive-description">This hides the workout row, including past dates. Your history is kept, and you can restore the row in Settings.</p>
+    <div class="archive-dialog-actions"><button type="button" data-cancel-archive autofocus>Keep workout</button><button type="button" class="danger" data-confirm-archive>Archive workout</button></div>
+  </dialog>
+
   <script src="config.js?v=20260918-mobile-add-day"></script>
-  <script src="app.js?v=20261014-reset-settings"></script>
+  <script src="app.js?v=20261014-archive-header"></script>
 </body>
 </html>

@@ -24,7 +24,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Gentle phone scrolling only when needed to fit the editor in the upper half, accounting for keyboard space and reduced-motion preferences
 - Add workout and Add day buttons below the table stay visible during horizontal scrolling
 - Add day opens a small date picker; Add column creates a blank date column without inventing workout records. Empty added dates are stored on this device; saved entries sync through the existing Sheet backend
-- Workout logo next to the title, and the goal: last 2 reps at effort 7/10, 8/10, and 9/10 across sets 1, 2, and 3
+- Centered Workout title with a dumbbell at each edge, no visible machine-column label, and the goal: last 2 reps at effort 7/10, 8/10, and 9/10 across sets 1, 2, and 3
 - Settings at the bottom, opening in a vertically centered dialog with keyboard focus containment and Escape support
 - Garden, Tide, Moon, and Sunrise color schemes, plus separate controls for workout notes and setup previews
 - Advanced settings for profile name, auto sync, reduced motion, Google Sheet link, sync status, and Reset to default settings
@@ -163,3 +163,5 @@ Google's web app docs describe this deployment model here: https://developers.go
 This is intentionally low-security and simple. Anyone with the deployed Apps Script URL can write to the Sheet. Because `config.js` is loaded by the browser, the Apps Script URL is visible to anyone who can view the site files. That is fine for a personal prototype, but not for sensitive data.
 
 Reset to default settings restores only preferences. It preserves workout logs, exercises and setup notes, added date columns, and the configured Sheet connection. It does not clear browser storage.
+
+Workout rows have a subtle trash icon at the far right. It asks to archive the named workout, then hides that row across dates while preserving all exercise data and logs. Undo is available immediately; Settings → Advanced settings → Archived workouts restores it later. Archived IDs are stored separately from preferences and survive resets, reloads, and Sheet snapshots. This first-stage feature is device-local and needs no Apps Script update; cross-device archiving is deferred to the backend upgrade.

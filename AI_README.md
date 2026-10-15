@@ -137,4 +137,4 @@ If `backend.sample.gs` changes, the README should also mention redeploying via `
 
 This is intentionally simple and permissive for prototyping. Anyone with the Apps Script URL can write to the Sheet via the script. Do not use this for sensitive data without adding authentication or validation.
 
-Phone editing scrolls the selected workout to the top and realigns when the visual viewport resizes for the keyboard. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.
+Phone editing keeps the current scroll position when the workout and editor fit in the upper half of the screen. Otherwise it smoothly scrolls only as far as needed, accounting for keyboard space and respecting reduced-motion preferences. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.

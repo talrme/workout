@@ -162,4 +162,4 @@ Google's web app docs describe this deployment model here: https://developers.go
 
 This is intentionally low-security and simple. Anyone with the deployed Apps Script URL can write to the Sheet. Because `config.js` is loaded by the browser, the Apps Script URL is visible to anyone who can view the site files. That is fine for a personal prototype, but not for sensitive data.
 
-Phone editing scrolls the selected workout to the top and realigns when the visual viewport resizes for the keyboard. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.
+Phone editing keeps the current scroll position when the workout and editor fit in the upper half of the screen. Otherwise it smoothly scrolls only as far as needed, accounting for keyboard space and respecting reduced-motion preferences. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.

@@ -363,12 +363,36 @@ function inputAttributes(machine) {
   return `type="number" min="0" step="5" inputmode="decimal"`;
 }
 
+let detailScrollTimer = 0;
+
 function alignMachineDetail() {
-  if (!state.expandedId || !window.matchMedia("(max-width: 760px)").matches) return;
-  const row = document.querySelector(`[data-machine-row="${CSS.escape(state.expandedId)}"]`);
-  if (!row) return;
-  const top = window.visualViewport?.offsetTop || 0;
-  window.scrollBy({ top: row.getBoundingClientRect().top - top - 4, behavior: "instant" });
+  window.clearTimeout(detailScrollTimer);
+  // Coalesce focus and keyboard resize events into a single gentle adjustment.
+  detailScrollTimer = window.setTimeout(() => {
+    if (!state.expandedId || !window.matchMedia("(max-width: 760px)").matches) return;
+    const row = document.querySelector(`[data-machine-row="${CSS.escape(state.expandedId)}"]`);
+    const panel = document.querySelector(`[data-detail-panel="${CSS.escape(state.expandedId)}"]`);
+    if (!row || !panel) return;
+    const viewport = window.visualViewport;
+    const top = (viewport?.offsetTop || 0) + 12;
+    const rowBounds = row.getBoundingClientRect();
+    const panelBounds = panel.getBoundingClientRect();
+    const editorHeight = panelBounds.bottom - rowBounds.top;
+    // Prefer the upper half; use more space if needed to fit the whole editor.
+    const availableHeight = Math.min(
+      (viewport?.height || window.innerHeight) - 24,
+      Math.max(window.innerHeight / 2 - 24, editorHeight)
+    );
+    const bottom = top + availableHeight;
+    let adjustment = 0;
+    if (panelBounds.bottom > bottom) adjustment = panelBounds.bottom - bottom;
+    // Keep the workout heading visible when the expanded options are taller.
+    adjustment = Math.min(adjustment, Math.max(0, rowBounds.top - top));
+    if (rowBounds.top < top) adjustment = rowBounds.top - top;
+    if (Math.abs(adjustment) < 2) return;
+    const reduceMotion = state.settings.reduceMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollBy({ top: adjustment, behavior: reduceMotion ? "instant" : "smooth" });
+  }, 100);
 }
 
 function selectTodayWeight(machineId) {

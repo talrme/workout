@@ -28,7 +28,6 @@
         </table>
       </div>
       <div class="table-actions" data-table-actions></div>
-      <div class="archive-notice" data-day-delete-notice role="status" hidden><span data-day-delete-message></span><button type="button" data-undo-day-delete>Undo delete</button></div>
       <div class="archive-notice" data-archive-notice role="status" hidden><span data-archive-message></span><button type="button" data-undo-archive>Undo</button></div>
       <div class="workout-legend" data-suggestion-legend hidden>
         <span class="suggestion-swatch" aria-hidden="true"></span>
@@ -94,6 +93,15 @@
             <summary>Archived workouts (<span data-archive-count>0</span>)</summary>
             <p class="setting-help">Restore archived rows here with all their history. After the backend upgrade, archiving syncs across devices.</p>
             <div class="archived-list" data-archived-list></div>
+          </details>
+          <details class="archived-settings" data-deleted-days-settings>
+            <summary>Deleted days</summary>
+            <p class="setting-help">Restore the most recently deleted day for this user on this browser, even after refreshing.</p>
+            <div class="archived-workout" data-day-delete-notice role="status" hidden>
+              <span data-day-delete-message></span>
+              <button type="button" data-undo-day-delete>Restore day</button>
+            </div>
+            <p class="setting-help" data-deleted-days-empty>No deleted day to restore.</p>
           </details>
           <button type="button" class="danger" data-reset-site>Reset to default settings</button>
           <small class="setting-help">Keeps your workout history, exercises, and added dates.</small>

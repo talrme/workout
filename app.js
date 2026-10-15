@@ -346,13 +346,14 @@ function confirmDayDeletion() {
   saveState();
   dialog.close();
   render();
-  document.querySelector("[data-undo-day-delete]").focus({ preventScroll: true });
+  document.querySelector("[data-open-settings]").focus({ preventScroll: true });
 }
 
 function renderDayDeleteUndo() {
   const undo = profiles[state.activeUserId]?.dayDeleteUndo;
   const notice = document.querySelector("[data-day-delete-notice]");
   notice.hidden = !undo;
+  document.querySelector("[data-deleted-days-empty]").hidden = Boolean(undo);
   if (undo) document.querySelector("[data-day-delete-message]").textContent = `${formatLongDate(undo.date)} deleted for ${currentUser().name}.`;
 }
 
@@ -371,7 +372,7 @@ function undoDayDeletion() {
   historyColumns = Math.max(historyColumns, historyDates().indexOf(undo.date) + 2);
   saveState();
   render();
-  document.querySelector(`[data-delete-day="${CSS.escape(undo.date)}"]`)?.focus({ preventScroll: true });
+  document.querySelector("[data-deleted-days-settings] summary").focus({ preventScroll: true });
 }
 
 function updateTableWidth(dateCount = displayDates().length) {

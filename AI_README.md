@@ -31,3 +31,5 @@ Delete day controls appear below the exercise rows, one subtle trash icon per di
 Save / Share beside Settings opens a phone-install guide and Copy link / native Share controls. URLs always include the active user ID and remove unrelated query parameters. The install worker only serves profile-aware manifests at a stable HTTPS URL, with a stable app ID matching the original root start URL; it never caches app pages or backend data. New installations retain the profile in start_url. Existing installed-app problems may require removal/reinstallation through Android Settings, not clearing browser data.
 
 Inline editors record the values displayed on opening. Only an actual weight or workout-note change creates a log; opening, focusing, pressing Save unchanged, closing, and setup-note-only edits do not activate a workout. Quick checkmarks still explicitly log the previous weight. Example placeholders are removed without erasing saved notes.
+
+Restore the most recently deleted day from Settings → Advanced settings → Deleted days. Recovery remains local to this browser and profile, survives reload, and does not occupy space on the home screen.

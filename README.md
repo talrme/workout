@@ -20,9 +20,9 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Recent weights for each machine/date
 - Date headers that quietly show the day label and date, like `Today` and `9/14`
 - A soft checkmark for quickly logging today's set at the previous weight
-- A green checked weight once today's set has been logged; tapping it opens the editor with today's value selected
+- A green checked weight once today's set has been logged; tap the number to edit, or the separate checkmark to uncheck today
 - Subtle today's notes under logged values, with a local setting to hide them from the table
-- Expandable machine details for setup notes, today's weight, today's note, and removing today's entry
+- Compact machine details with today's weight and setup notes, an expandable More options section for today's note, and one row of Save/Remove/Close buttons
 - Clickable date headers for editing or deleting a whole workout day
 - Clickable previous-day values for editing or deleting one machine entry on that date
 - A small right-side `Add Day` button for adding a different date, such as yesterday
@@ -161,3 +161,5 @@ Google's web app docs describe this deployment model here: https://developers.go
 ## Security Note
 
 This is intentionally low-security and simple. Anyone with the deployed Apps Script URL can write to the Sheet. Because `config.js` is loaded by the browser, the Apps Script URL is visible to anyone who can view the site files. That is fine for a personal prototype, but not for sensitive data.
+
+Phone editing scrolls the selected workout to the top and realigns when the visual viewport resizes for the keyboard. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.

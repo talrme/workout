@@ -916,3 +916,71 @@ button.primary {
     font-size: 1.55rem;
   }
 }
+
+/* Geometry-based checks stay centered regardless of the system font. */
+.checkmark-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.same-button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+}
+.done-pill {
+  display: inline-flex;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.done-pill button {
+  display: inline-grid;
+  place-items: center;
+  min-height: 38px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  touch-action: manipulation;
+}
+.done-pill .uncheck-button {
+  min-width: 32px;
+  padding: 0 5px;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+}
+.done-pill button:hover {
+  transform: none;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.15);
+}
+.detail-panel { gap: 8px; padding: 10px; }
+.detail-grid { grid-template-columns: minmax(92px, 0.35fr) minmax(0, 1fr); }
+.detail-more summary {
+  cursor: pointer;
+  color: var(--green);
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding: 5px 0;
+}
+.detail-more[open] label { margin-top: 5px; }
+.detail-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.detail-actions button { min-height: 38px; padding: 0 8px; }
+@media (max-width: 760px) {
+  body.detail-open { padding-bottom: 100svh; }
+  .detail-panel { width: calc(100vw - 22px); }
+  .detail-panel label { gap: 4px; }
+  .detail-panel label span { font-size: 0.65rem; }
+  .detail-panel input, .detail-panel textarea { font-size: 16px; padding: 6px 8px; }
+  .detail-panel textarea { height: 58px; min-height: 42px; }
+  .detail-actions button { font-size: 0.85rem; }
+}

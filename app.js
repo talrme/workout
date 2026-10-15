@@ -88,6 +88,7 @@ function render() {
   if (window.WORKOUT_CONFIG?.sheetUrl) els.sheetLink.href = window.WORKOUT_CONFIG.sheetUrl;
   renderSettings();
   renderMachineTable();
+  document.body.classList.toggle("detail-open", Boolean(state.expandedId));
 }
 
 function renderSettings() {
@@ -164,6 +165,10 @@ function groupRank(group) {
   return index === -1 ? GROUP_ORDER.length : index;
 }
 
+function checkmarkIcon() {
+  return '<svg class="checkmark-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m5 12 4.5 4.5L19 7" /></svg>';
+}
+
 function machineRow(machine, dates, suggestedIds = new Set()) {
   const today = isoDate(new Date());
   const isSuggested = suggestedIds.has(machine.id);
@@ -181,9 +186,9 @@ function machineRow(machine, dates, suggestedIds = new Set()) {
         if (date === today) {
           const previous = previousWeight(machine.id, today) || defaultValue(machine);
           if (log?.weight) {
-            return `<td class="today-cell"><div class="today-logged"><button type="button" class="done-pill" data-edit-today="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}"><span aria-hidden="true">✓</span>${escapeHtml(log.weight)}</button>${todayNoteHtml(log)}</div></td>`;
+            return `<td class="today-cell"><div class="today-logged"><div class="done-pill"><button type="button" class="uncheck-button" data-remove-today="${escapeHtml(machine.id)}" aria-label="Uncheck today's ${escapeHtml(machine.name)}" title="Uncheck today">${checkmarkIcon()}</button><button type="button" class="done-weight" data-edit-today="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}">${escapeHtml(log.weight)}</button></div>${todayNoteHtml(log)}</div></td>`;
           }
-          return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">✓</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
+          return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">${checkmarkIcon()}</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }
         return `<td class="${log?.weight ? "" : "is-missing"}">${log?.weight ? `<button type="button" class="weight-chip history-entry-button" data-open-entry-date="${escapeHtml(date)}" data-open-entry-machine="${escapeHtml(machine.id)}" aria-label="Edit ${escapeHtml(machine.name)} for ${escapeHtml(formatLongDate(date))}">${escapeHtml(log.weight)}</button>` : `<span class="empty-cell">-</span>`}</td>`;
       }).join("")}
@@ -225,14 +230,17 @@ function detailRow(machine, colspan) {
               <input data-today-weight ${inputAttributes(machine)} value="${escapeHtml(todayLog?.weight || previous || "")}">
             </label>
             <label>
+              <span>Setup notes</span>
+              <textarea data-setup-notes rows="2">${escapeHtml(machine.setupNotes || "")}</textarea>
+            </label>
+          </div>
+          <details class="detail-more">
+            <summary>More options</summary>
+            <label>
               <span>Today's note</span>
               <input data-today-note type="text" value="${escapeHtml(todayLog?.note || "")}" placeholder="Felt smooth, seat tweak, etc.">
             </label>
-          </div>
-          <label>
-            <span>Setup notes</span>
-            <textarea data-setup-notes rows="3">${escapeHtml(machine.setupNotes || "")}</textarea>
-          </label>
+          </details>
           <div class="detail-actions">
             <button type="button" class="primary" data-save-detail="${escapeHtml(machine.id)}">Save</button>
             ${todayLog ? `<button type="button" class="danger" data-remove-today="${escapeHtml(machine.id)}">Remove</button>` : ""}
@@ -355,12 +363,20 @@ function inputAttributes(machine) {
   return `type="number" min="0" step="5" inputmode="decimal"`;
 }
 
+function alignMachineDetail() {
+  if (!state.expandedId || !window.matchMedia("(max-width: 760px)").matches) return;
+  const row = document.querySelector(`[data-machine-row="${CSS.escape(state.expandedId)}"]`);
+  if (!row) return;
+  const top = window.visualViewport?.offsetTop || 0;
+  window.scrollBy({ top: row.getBoundingClientRect().top - top - 4, behavior: "instant" });
+}
+
 function selectTodayWeight(machineId) {
-  window.setTimeout(() => {
-    const input = document.querySelector(`[data-detail-panel="${CSS.escape(machineId)}"] [data-today-weight]`);
-    input?.focus();
-    input?.select();
-  }, 0);
+  const input = document.querySelector(`[data-detail-panel="${CSS.escape(machineId)}"] [data-today-weight]`);
+  // Keep focus in the tap handler so iOS can open the keyboard.
+  input?.focus({ preventScroll: true });
+  input?.select();
+  alignMachineDetail();
 }
 
 function openMachineDetail(machineId, options = {}) {
@@ -376,6 +392,7 @@ function openMachineDetail(machineId, options = {}) {
   state.expandedId = machineId;
   saveState();
   render();
+  alignMachineDetail();
   if (!shouldCollapse && options.focusWeight) selectTodayWeight(machineId);
 }
 
@@ -913,6 +930,12 @@ function bindEvents() {
     }
   });
   window.addEventListener("resize", () => updateTableWidth());
+  window.visualViewport?.addEventListener("resize", () => {
+    if (document.activeElement?.closest("[data-detail-panel]")) alignMachineDetail();
+  });
+  els.machineTable.addEventListener("focusin", (event) => {
+    if (event.target.closest("[data-detail-panel]")) alignMachineDetail();
+  });
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) syncAfterReturn();
   });

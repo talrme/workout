@@ -29,9 +29,9 @@ The app shows:
 - The latest logged weight per machine/date
 - Date headers show a subtle day/date pair, such as `Today` over `9/14`, rather than completion counts
 - A soft checkmark in today's column that repeats the previous logged weight
-- A green checked weight after today's set is logged; clicking it opens the editor and selects today's value
+- A green checked weight after today's set is logged; tap the number to edit, or the separate checkmark to uncheck today
 - Subtle today's notes under logged values, controlled by the browser-local `hideTodayNotes` setting
-- Accordion details per machine for setup notes, today's weight, today's note, and removing today's entry
+- Compact accordion details with today's weight and setup notes, More options for today's note, and one row of Save/Remove/Close buttons
 - Date headers open a whole-day editor for all machine weights/notes on that date
 - A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
 - A bottom `Add workout` row creates custom rows with a section, starting weight, and setup notes
@@ -136,3 +136,5 @@ If `backend.sample.gs` changes, the README should also mention redeploying via `
 ## Security
 
 This is intentionally simple and permissive for prototyping. Anyone with the Apps Script URL can write to the Sheet via the script. Do not use this for sensitive data without adding authentication or validation.
+
+Phone editing scrolls the selected workout to the top and realigns when the visual viewport resizes for the keyboard. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.

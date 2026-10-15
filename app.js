@@ -22,14 +22,16 @@ const state = {
   machines: DEFAULT_MACHINES.map((machine) => ({ ...machine })),
   logs: [],
   expandedId: "",
-  editingDate: "",
-  editingMachineId: "",
+  expandedDate: "",
+  extraDates: [],
   settings: {
     backendUrl: window.WORKOUT_CONFIG?.defaultBackendUrl || "",
     profileName: "Tal",
     autoSync: window.WORKOUT_CONFIG?.autoSync ?? true,
     reduceMotion: false,
-    hideTodayNotes: false
+    hideTodayNotes: false,
+    showSetupNotes: true,
+    theme: "garden"
   }
 };
 
@@ -48,14 +50,10 @@ const els = {
   profileName: document.querySelector("[data-profile-name]"),
   autoSync: document.querySelector("[data-auto-sync]"),
   reduceMotion: document.querySelector("[data-reduce-motion]"),
-  hideTodayNotes: document.querySelector("[data-hide-today-notes]"),
+  showNotes: document.querySelector("[data-show-notes]"),
+  showSetup: document.querySelector("[data-show-setup]"),
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
   settingsModal: document.querySelector("[data-settings-modal]"),
-  dateBackdrop: document.querySelector("[data-date-backdrop]"),
-  dateModal: document.querySelector("[data-date-modal]"),
-  dateTitle: document.querySelector("[data-date-title]"),
-  editDate: document.querySelector("[data-edit-date]"),
-  dayMachineList: document.querySelector("[data-day-machine-list]"),
   workoutBackdrop: document.querySelector("[data-workout-backdrop]"),
   workoutModal: document.querySelector("[data-workout-modal]"),
   workoutName: document.querySelector("[data-workout-name]"),
@@ -69,6 +67,7 @@ function loadState() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY) || "{}");
     if (Array.isArray(saved.machines) && saved.machines.length) state.machines = mergeMachines(saved.machines);
     if (Array.isArray(saved.logs)) state.logs = saved.logs;
+    if (Array.isArray(saved.extraDates)) state.extraDates = saved.extraDates.filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date));
     Object.assign(state.settings, saved.settings || {});
   } catch {
     localStorage.removeItem(STORAGE_KEY);
@@ -85,18 +84,27 @@ function saveState() {
 }
 
 function render() {
-  document.body.classList.toggle("reduce-motion", state.settings.reduceMotion);
+  applyAppearance();
   if (window.WORKOUT_CONFIG?.sheetUrl) els.sheetLink.href = window.WORKOUT_CONFIG.sheetUrl;
-  renderSettings();
+  if (els.settingsModal.hidden) renderSettings();
   renderMachineTable();
   document.body.classList.toggle("detail-open", Boolean(state.expandedId));
+}
+
+function applyAppearance() {
+  const themes = ["garden", "tide", "moon", "sunrise"];
+  if (!themes.includes(state.settings.theme)) state.settings.theme = "garden";
+  document.body.dataset.theme = state.settings.theme;
+  document.body.classList.toggle("reduce-motion", state.settings.reduceMotion);
 }
 
 function renderSettings() {
   els.profileName.value = state.settings.profileName || "";
   els.autoSync.checked = Boolean(state.settings.autoSync);
   els.reduceMotion.checked = Boolean(state.settings.reduceMotion);
-  els.hideTodayNotes.checked = Boolean(state.settings.hideTodayNotes);
+  els.showNotes.checked = !state.settings.hideTodayNotes;
+  els.showSetup.checked = state.settings.showSetupNotes;
+  document.querySelectorAll("button[data-theme]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.theme === state.settings.theme)));
 }
 
 function renderMachineTable() {
@@ -110,20 +118,18 @@ function renderMachineTable() {
     <tr>
       <th scope="col" class="machine-col">Machine</th>
       ${dates.map((date) => `
-        <th scope="col" class="date-col">
+        <th scope="col" class="date-col" data-column-date="${escapeHtml(date)}">
           <div class="date-head">
-            <button type="button" data-open-date="${escapeHtml(date)}">
+            <div class="date-label">
               <span>${escapeHtml(formatDayLabel(date, date === today))}</span>
               <small>${escapeHtml(formatDateLabel(date))}</small>
-            </button>
+            </div>
           </div>
         </th>
       `).join("")}
-      <th scope="col" class="add-day-col">
-        <button type="button" class="add-day-button" data-add-day aria-label="Add another workout day">
-          <span aria-hidden="true">+</span>
-          <small>Add Day</small>
-        </button>
+      <th scope="col" class="history-more-col">
+        ${historyDates().length > historyColumns - 1 ? '<button type="button" class="older-button" data-older-entries>Show older entries →</button>' : '<span class="history-end">All entries shown</span>'}
+        ${historyColumns > HISTORY_COLUMNS ? '<button type="button" class="older-button" data-recent-entries>Recent only</button>' : ''}
       </th>
     </tr>
   `;
@@ -146,7 +152,7 @@ function updateTableWidth(dateCount = displayDates().length) {
   const compact = window.matchMedia("(max-width: 760px)").matches;
   const machineWidth = compact ? 132 : 250;
   const dateWidth = compact ? 92 : 108;
-  const addDayWidth = compact ? 52 : 92;
+  const addDayWidth = 132;
   els.machineTableEl.style.setProperty("--table-target-width", `${machineWidth + (dateCount * dateWidth) + addDayWidth}px`);
 }
 
@@ -179,7 +185,7 @@ function machineRow(machine, dates, suggestedIds = new Set()) {
       <th scope="row">
         <button type="button" class="machine-name" data-expand="${escapeHtml(machine.id)}" aria-expanded="${state.expandedId === machine.id}">
           <span>${escapeHtml(machine.name)}</span>
-          ${setupPreview ? `<small class="setup-preview" title="${escapeHtml(setupPreview)}">${escapeHtml(setupPreview)}</small>` : ""}
+          ${setupPreview && state.settings.showSetupNotes ? `<small class="setup-preview" title="${escapeHtml(setupPreview)}">${escapeHtml(setupPreview)}</small>` : ""}
         </button>
       </th>
       ${dates.map((date) => {
@@ -189,11 +195,11 @@ function machineRow(machine, dates, suggestedIds = new Set()) {
           if (log?.weight) {
             return `<td class="today-cell"><div class="today-logged"><div class="done-pill"><button type="button" class="uncheck-button" data-remove-today="${escapeHtml(machine.id)}" aria-label="Uncheck today's ${escapeHtml(machine.name)}" title="Uncheck today">${checkmarkIcon()}</button><button type="button" class="done-weight" data-edit-today="${escapeHtml(machine.id)}" aria-label="Edit today's ${escapeHtml(machine.name)} ${escapeHtml(valueLabel(machine).toLowerCase())}">${escapeHtml(log.weight)}</button></div>${todayNoteHtml(log)}</div></td>`;
           }
-          return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}">${checkmarkIcon()}</button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
+          return `<td class="today-cell is-missing"><button type="button" class="same-button" data-repeat-weight="${escapeHtml(machine.id)}" aria-label="Log ${escapeHtml(machine.name)} at previous ${escapeHtml(valueLabel(machine).toLowerCase())}"><span class="empty-ring" aria-hidden="true"></span></button><span class="ghost-weight">${previous ? escapeHtml(previous) : ""}</span></td>`;
         }
-        return `<td class="${log?.weight ? "" : "is-missing"}">${log?.weight ? `<button type="button" class="weight-chip history-entry-button" data-open-entry-date="${escapeHtml(date)}" data-open-entry-machine="${escapeHtml(machine.id)}" aria-label="Edit ${escapeHtml(machine.name)} for ${escapeHtml(formatLongDate(date))}">${escapeHtml(log.weight)}</button>` : `<span class="empty-cell">-</span>`}</td>`;
+        return `<td class="${log?.weight ? "" : "is-missing"}"><button type="button" class="history-entry-button ${log?.weight ? 'weight-chip' : 'empty-cell'}" data-open-entry-date="${escapeHtml(date)}" data-open-entry-machine="${escapeHtml(machine.id)}" aria-label="${log?.weight ? 'Edit' : 'Add'} ${escapeHtml(machine.name)} for ${escapeHtml(formatLongDate(date))}">${log?.weight ? escapeHtml(log.weight) : '–'}</button>${log ? todayNoteHtml(log) : ''}</td>`;
       }).join("")}
-      <td class="add-day-spacer" aria-hidden="true"></td>
+      <td class="history-spacer" aria-hidden="true"></td>
     </tr>
   `;
 }
@@ -205,26 +211,30 @@ function todayNoteHtml(log) {
 }
 
 function renderTableActions() {
-  const hasOlder = historyDates().length > historyColumns - 1;
   document.querySelector("[data-table-actions]").innerHTML = `
-    <button type="button" class="add-workout-button" data-open-workout><span aria-hidden="true">+</span> Add workout</button>
-    <div class="history-actions">
-      ${hasOlder ? '<button type="button" data-older-entries>Older entries <span aria-hidden="true">→</span></button>' : ''}
-      ${historyColumns > HISTORY_COLUMNS ? '<button type="button" data-recent-entries>Recent only</button>' : ''}
-    </div>`;
+    <div class="table-add-buttons">
+      <button type="button" class="add-workout-button" data-open-workout><span aria-hidden="true">+</span> Add workout</button>
+      <button type="button" class="add-workout-button" data-add-day aria-expanded="false"><span aria-hidden="true">+</span> Add day</button>
+    </div>
+    <form class="add-day-form" data-add-day-form hidden>
+      <label><span>Workout date</span><input type="date" data-new-date required value="${isoDate(addDays(new Date(), -1))}"></label>
+      <button type="submit" class="primary">Add column</button>
+    </form>`;
 }
 
 function detailRow(machine, colspan) {
-  const today = isoDate(new Date());
-  const todayLog = latestLogFor(machine.id, today);
-  const previous = previousWeight(machine.id, today) || defaultValue(machine);
+  const date = state.expandedDate || isoDate(new Date());
+  const isToday = date === isoDate(new Date());
+  const todayLog = latestLogFor(machine.id, date);
+  const previous = isToday ? previousWeight(machine.id, date) || defaultValue(machine) : "";
+  const dateLabel = isToday ? "Today's" : formatDateLabel(date);
   return `
     <tr class="detail-row">
       <td colspan="${colspan}">
         <div class="detail-panel" data-detail-panel="${escapeHtml(machine.id)}">
           <div class="detail-grid">
             <label>
-              <span>Today's ${escapeHtml(valueLabel(machine).toLowerCase())}</span>
+              <span>${escapeHtml(dateLabel)} ${escapeHtml(valueLabel(machine).toLowerCase())}</span>
               <input data-today-weight ${inputAttributes(machine)} value="${escapeHtml(todayLog?.weight || previous || "")}">
             </label>
             <label>
@@ -235,13 +245,13 @@ function detailRow(machine, colspan) {
           <details class="detail-more">
             <summary>More options</summary>
             <label>
-              <span>Today's note</span>
+              <span>${isToday ? "Today’s note" : "Workout note"}</span>
               <input data-today-note type="text" value="${escapeHtml(todayLog?.note || "")}" placeholder="Felt smooth, seat tweak, etc.">
             </label>
           </details>
           <div class="detail-actions">
             <button type="button" class="primary" data-save-detail="${escapeHtml(machine.id)}">Save</button>
-            ${todayLog ? `<button type="button" class="danger detail-secondary" data-remove-today="${escapeHtml(machine.id)}" aria-label="Remove today's entry" title="Remove today's entry"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7" /></svg></button>` : ""}
+            ${todayLog ? `<button type="button" class="danger detail-secondary" data-remove-entry="${escapeHtml(machine.id)}" aria-label="Remove entry" title="Remove entry"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7" /></svg></button>` : ""}
             <button type="button" class="detail-secondary" data-close-detail aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
           </div>
         </div>
@@ -252,10 +262,10 @@ function detailRow(machine, colspan) {
 
 function historyDates() {
   const today = isoDate(new Date());
-  return Array.from(new Set(state.logs
+  return Array.from(new Set([...state.extraDates, ...state.logs
     .filter((log) => String(log.weight || "").trim())
     .map((log) => normalizeDate(log.date))
-    .filter((date) => date && dateHasVisibleLog(date))))
+    .filter((date) => date && dateHasVisibleLog(date))]))
     .filter((date) => date !== today)
     .sort((a, b) => b.localeCompare(a));
 }
@@ -414,6 +424,7 @@ function openMachineDetail(machineId, options = {}) {
     saveDetail(previousExpandedId, { renderAfter: false });
   }
   state.expandedId = machineId;
+  state.expandedDate = options.date || isoDate(new Date());
   saveState();
   render();
   alignMachineDetail();
@@ -443,14 +454,15 @@ function saveDetail(machineId, options = {}) {
   const setupNotes = panel.querySelector("[data-setup-notes]").value.trim();
   const weight = panel.querySelector("[data-today-weight]").value.trim();
   const note = panel.querySelector("[data-today-note]").value.trim();
-  const todayLog = latestLogFor(machineId, isoDate(new Date()));
+  const date = state.expandedDate || isoDate(new Date());
+  const todayLog = latestLogFor(machineId, date);
   const updatedMachine = { ...machine, setupNotes };
   const setupChanged = setupNotes !== String(machine.setupNotes || "");
   const logChanged = Boolean(weight || note)
     && (String(todayLog?.weight || "") !== weight || String(todayLog?.note || "") !== note);
 
   state.machines = state.machines.map((item) => item.id === machineId ? updatedMachine : item);
-  if (logChanged) appendTodayLog(updatedMachine, { weight, note }, { renderAfter: false });
+  if (logChanged) appendLogForDate(updatedMachine, date, { weight, note }, { renderAfter: false });
   state.expandedId = "";
   saveState();
   if (options.renderAfter !== false) render();
@@ -550,113 +562,32 @@ function appendLogForDate(machine, date, values, options = {}) {
   syncLog(log);
 }
 
-function openDateModal(date, focusMachineId = "") {
-  const hadExpandedDetail = Boolean(state.expandedId);
-  state.expandedId = "";
-  state.editingDate = normalizeDate(date) || isoDate(new Date());
-  state.editingMachineId = focusMachineId;
-  saveState();
-  if (hadExpandedDetail) render();
-  els.editDate.value = state.editingDate;
-  renderDateModal();
-  els.dateBackdrop.hidden = false;
-  els.dateModal.hidden = false;
-  document.body.classList.add("is-modal-open");
-  if (focusMachineId) {
-    window.setTimeout(() => {
-      const section = els.dayMachineList.querySelector(`[data-day-machine="${CSS.escape(focusMachineId)}"]`);
-      const input = section?.querySelector("[data-day-weight]");
-      section?.scrollIntoView({ block: "center" });
-      input?.focus();
-      input?.select();
-    }, 0);
-  }
-}
-
 function addDay() {
-  openDateModal(isoDate(addDays(new Date(), -1)));
+  const form = document.querySelector("[data-add-day-form]");
+  form.hidden = !form.hidden;
+  document.querySelector("[data-add-day]").setAttribute("aria-expanded", String(!form.hidden));
 }
 
-function renderDateModal() {
-  const date = normalizeDate(els.editDate.value || state.editingDate);
-  els.dateTitle.textContent = formatLongDate(date);
-  els.dayMachineList.innerHTML = orderedMachines().map((machine) => {
-    const log = latestLogFor(machine.id, date);
-    return `
-      <section class="day-machine ${state.editingMachineId === machine.id ? "is-focused" : ""}" data-day-machine="${escapeHtml(machine.id)}">
-        <div class="day-machine-head">
-          <h3>${escapeHtml(machine.name)}</h3>
-          ${log ? `<button type="button" class="entry-delete-button" data-delete-day-entry="${escapeHtml(machine.id)}">Delete</button>` : ""}
-        </div>
-        <div class="day-fields">
-          <label>
-            <span>${escapeHtml(valueLabel(machine))}</span>
-            <input data-day-weight ${inputAttributes(machine)} value="${escapeHtml(log?.weight || "")}">
-          </label>
-          <label>
-            <span>Note</span>
-            <input data-day-note type="text" value="${escapeHtml(log?.note || "")}" placeholder="Optional">
-          </label>
-        </div>
-      </section>
-    `;
-  }).join("");
+function addDateColumn(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  if (!state.extraDates.includes(date) && date !== isoDate(new Date())) state.extraDates.push(date);
+  historyColumns = Math.max(historyColumns, historyDates().indexOf(date) + 2);
+  saveState();
+  render();
+  const index = displayDates().indexOf(date);
+  const scroller = document.querySelector(".table-scroll");
+  const dateWidth = window.matchMedia("(max-width: 760px)").matches ? 92 : 108;
+  scroller.scrollTo({ left: Math.max(0, index * dateWidth), behavior: state.settings.reduceMotion ? "instant" : "smooth" });
 }
 
-function closeDateModal() {
-  state.editingDate = "";
-  state.editingMachineId = "";
-  els.dateBackdrop.hidden = true;
-  els.dateModal.hidden = true;
-  document.body.classList.remove("is-modal-open");
-}
-
-function deleteDayEntry(machineId) {
-  const date = normalizeDate(els.editDate.value || state.editingDate);
-  const machine = state.machines.find((item) => item.id === machineId);
-  const existing = latestLogFor(machineId, date);
-  if (!date || !machine || !existing) return;
+function removeEntry(machineId) {
+  const date = state.expandedDate || isoDate(new Date());
+  const machine = state.machines.find(item => item.id === machineId);
+  if (!machine || !latestLogFor(machineId, date)) return;
   appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
-  state.editingMachineId = machineId;
+  state.expandedId = "";
   saveState();
   render();
-  renderDateModal();
-  setSyncNote("Entry deleted");
-}
-
-function saveDateModal() {
-  const date = normalizeDate(els.editDate.value || state.editingDate);
-  if (!date) return;
-  orderedMachines().forEach((machine) => {
-    const section = els.dayMachineList.querySelector(`[data-day-machine="${CSS.escape(machine.id)}"]`);
-    if (!section) return;
-    const weight = section.querySelector("[data-day-weight]").value.trim();
-    const note = section.querySelector("[data-day-note]").value.trim();
-    const existing = latestLogFor(machine.id, date);
-    if (!weight && !note && existing) {
-      appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
-      return;
-    }
-    if (!weight && !note) return;
-    if (String(existing?.weight || "") === weight && String(existing?.note || "") === note) return;
-    appendLogForDate(machine, date, { weight, note }, { renderAfter: false });
-  });
-  saveState();
-  closeDateModal();
-  render();
-  setSyncNote("Saved");
-}
-
-function deleteDateModal() {
-  const date = normalizeDate(els.editDate.value || state.editingDate);
-  if (!date) return;
-  orderedMachines().forEach((machine) => {
-    appendLogForDate(machine, date, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
-  });
-  saveState();
-  closeDateModal();
-  render();
-  setSyncNote("Day deleted");
 }
 
 async function syncNow(options = {}) {
@@ -866,22 +797,26 @@ function renderAfterSnapshot() {
 }
 
 function openSettings() {
+  renderSettings();
   els.settingsBackdrop.hidden = false;
   els.settingsModal.hidden = false;
   document.body.classList.add("is-modal-open");
+  document.querySelector("[data-close-settings]").focus({ preventScroll: true });
 }
 
 function closeSettings() {
   els.settingsBackdrop.hidden = true;
   els.settingsModal.hidden = true;
   document.body.classList.remove("is-modal-open");
+  document.querySelector("[data-open-settings]").focus({ preventScroll: true });
 }
 
 function saveSettings() {
   state.settings.profileName = els.profileName.value.trim() || "Tal";
   state.settings.autoSync = els.autoSync.checked;
   state.settings.reduceMotion = els.reduceMotion.checked;
-  state.settings.hideTodayNotes = els.hideTodayNotes.checked;
+  state.settings.hideTodayNotes = !els.showNotes.checked;
+  state.settings.showSetupNotes = els.showSetup.checked;
   saveState();
   closeSettings();
   render();
@@ -936,21 +871,33 @@ function bindEvents() {
   document.querySelector("[data-save-settings]").addEventListener("click", saveSettings);
   document.querySelector("[data-reset-site]").addEventListener("click", resetSite);
   els.settingsBackdrop.addEventListener("click", closeSettings);
-  document.querySelector("[data-close-date]").addEventListener("click", closeDateModal);
-  document.querySelector("[data-cancel-date]").addEventListener("click", closeDateModal);
-  document.querySelector("[data-save-date]").addEventListener("click", saveDateModal);
-  document.querySelector("[data-delete-date]").addEventListener("click", deleteDateModal);
   document.querySelector("[data-close-workout]").addEventListener("click", closeWorkoutModal);
   document.querySelector("[data-cancel-workout]").addEventListener("click", closeWorkoutModal);
   document.querySelector("[data-save-workout]").addEventListener("click", saveWorkoutModal);
-  els.dateBackdrop.addEventListener("click", closeDateModal);
   els.workoutBackdrop.addEventListener("click", closeWorkoutModal);
-  els.editDate.addEventListener("change", renderDateModal);
-  els.dayMachineList.addEventListener("click", (event) => {
-    const deleteButton = event.target.closest("[data-delete-day-entry]");
-    if (deleteButton) {
-      event.stopPropagation();
-      deleteDayEntry(deleteButton.dataset.deleteDayEntry);
+  els.settingsModal.addEventListener("click", event => {
+    if (event.target === els.settingsModal) closeSettings();
+    const button = event.target.closest("button[data-theme]");
+    if (button) {
+      state.settings.theme = button.dataset.theme;
+      saveState();
+      applyAppearance();
+      document.querySelectorAll("button[data-theme]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+    }
+  });
+  document.addEventListener("keydown", event => {
+    const modal = !els.settingsModal.hidden ? els.settingsModal : !els.workoutModal.hidden ? els.workoutModal : null;
+    if (event.key === "Tab" && modal) {
+      const controls = [...modal.querySelectorAll('button, input, select, textarea, a[href], summary')].filter(item => item.getClientRects().length && !item.disabled);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+    if (event.key === "Escape") {
+      if (!els.settingsModal.hidden) closeSettings();
+      if (!els.workoutModal.hidden) closeWorkoutModal();
+      closeExpandedDetail();
     }
   });
   window.addEventListener("resize", () => updateTableWidth());
@@ -969,6 +916,11 @@ function bindEvents() {
   });
   // Capture outside taps before delegated controls stop propagation.
   document.addEventListener("click", (event) => {
+    const addForm = document.querySelector("[data-add-day-form]");
+    if (addForm && !event.target.closest("[data-add-day-form], [data-add-day]")) {
+      addForm.hidden = true;
+      document.querySelector("[data-add-day]")?.setAttribute("aria-expanded", "false");
+    }
     if (!state.expandedId || event.target.closest("[data-detail-panel]")) return;
     event.closedDetailId = state.expandedId;
     closeExpandedDetail();
@@ -976,6 +928,15 @@ function bindEvents() {
 
   document.querySelector("[data-table-actions]").addEventListener("click", (event) => {
     if (event.target.closest("[data-open-workout]")) openWorkoutModal();
+    if (event.target.closest("[data-add-day]")) addDay();
+  });
+  document.querySelector("[data-table-actions]").addEventListener("submit", event => {
+    if (!event.target.matches("[data-add-day-form]")) return;
+    event.preventDefault();
+    addDateColumn(event.target.querySelector("[data-new-date]").value);
+  });
+
+  els.tableHead.addEventListener("click", event => {
     if (event.target.closest("[data-older-entries]")) {
       historyColumns += HISTORY_COLUMNS;
       render();
@@ -984,22 +945,6 @@ function bindEvents() {
       historyColumns = HISTORY_COLUMNS;
       document.querySelector(".table-scroll").scrollLeft = 0;
       render();
-    }
-  });
-
-  els.tableHead.addEventListener("click", (event) => {
-    const openDateButton = event.target.closest("[data-open-date]");
-    if (openDateButton) {
-      event.stopPropagation();
-      openDateModal(openDateButton.dataset.openDate);
-      return;
-    }
-
-    const addDayButton = event.target.closest("[data-add-day]");
-    if (addDayButton) {
-      event.stopPropagation();
-      addDay();
-      return;
     }
   });
 
@@ -1013,7 +958,7 @@ function bindEvents() {
     const historyEntry = event.target.closest("[data-open-entry-date]");
     if (historyEntry) {
       event.stopPropagation();
-      openDateModal(historyEntry.dataset.openEntryDate, historyEntry.dataset.openEntryMachine);
+      openMachineDetail(historyEntry.dataset.openEntryMachine, { date: historyEntry.dataset.openEntryDate, focusWeight: true });
       return;
     }
 
@@ -1035,6 +980,13 @@ function bindEvents() {
     if (saveButton) {
       event.stopPropagation();
       saveDetail(saveButton.dataset.saveDetail);
+      return;
+    }
+
+    const removeEntryButton = event.target.closest("[data-remove-entry]");
+    if (removeEntryButton) {
+      event.stopPropagation();
+      removeEntry(removeEntryButton.dataset.removeEntry);
       return;
     }
 

@@ -169,7 +169,7 @@ button { cursor: pointer; color: inherit; }
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #fff8df;
+  background: var(--editor);
   font-size: 0.8rem;
   text-transform: uppercase;
   color: var(--muted);
@@ -223,7 +223,7 @@ button { cursor: pointer; color: inherit; }
   position: sticky;
   right: 0;
   z-index: 4;
-  box-shadow: -8px 0 0 #fff8df;
+  box-shadow: -8px 0 0 var(--editor);
 }
 
 .add-day-button {
@@ -290,7 +290,7 @@ button { cursor: pointer; color: inherit; }
 
 .add-workout-row td {
   padding: 10px;
-  background: #fff8df;
+  background: var(--editor);
   border-top: 2px solid var(--ink);
   text-align: left;
 }
@@ -327,27 +327,27 @@ button { cursor: pointer; color: inherit; }
 
 .machine-row.is-open th,
 .machine-row.is-open td {
-  background: #fff8df;
+  background: var(--editor);
 }
 
 .machine-row.is-suggested th,
 .machine-row.is-suggested td {
-  background: #fff3d5;
+  background: var(--suggested);
 }
 
 .machine-row.is-suggested th {
-  box-shadow: inset 4px 0 0 rgba(238, 140, 74, 0.72), 8px 0 0 #fff3d5;
+  box-shadow: inset 4px 0 0 rgba(238, 140, 74, 0.72), 8px 0 0 var(--suggested);
 }
 
 .machine-row.is-suggested .add-day-spacer {
-  background: #fff3d5;
-  box-shadow: -8px 0 0 #fff3d5;
+  background: var(--suggested);
+  box-shadow: -8px 0 0 var(--suggested);
 }
 
 .machine-row.is-open.is-suggested th,
 .machine-row.is-open.is-suggested td,
 .machine-row.is-open.is-suggested .add-day-spacer {
-  background: #fff2cc;
+  background: var(--suggested-open);
 }
 
 .machine-name {
@@ -393,14 +393,14 @@ button { cursor: pointer; color: inherit; }
   padding: 0 9px;
   border-radius: 999px;
   border: 2px solid rgba(23, 32, 24, 0.18);
-  background: #fff;
+  background: var(--field);
   color: var(--ink);
   font-weight: 950;
   font-variant-numeric: tabular-nums;
 }
 
 .history-entry-button:hover {
-  background: #fff8df;
+  background: var(--editor);
   border-color: rgba(49, 120, 92, 0.45);
   transform: translateY(-1px);
   box-shadow: none;
@@ -476,7 +476,7 @@ button { cursor: pointer; color: inherit; }
 
 .detail-row td {
   padding: 0;
-  background: #fff8df;
+  background: var(--editor);
   text-align: left;
 }
 
@@ -520,7 +520,7 @@ textarea {
   min-height: 42px;
   border: 2px solid var(--ink);
   border-radius: 8px;
-  background: #fff;
+  background: var(--field);
   color: var(--ink);
   padding: 9px 10px;
   font-weight: 850;
@@ -535,7 +535,7 @@ button {
   min-height: 42px;
   border: 2px solid var(--ink);
   border-radius: 8px;
-  background: #fff;
+  background: var(--field);
   padding: 0 12px;
   font-weight: 950;
   transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
@@ -635,7 +635,7 @@ button.primary {
   min-height: 18px;
   border: 2px solid rgba(238, 140, 74, 0.58);
   border-radius: 6px;
-  background: #fff3d5;
+  background: var(--suggested);
 }
 
 .modal-backdrop {
@@ -710,7 +710,7 @@ button.primary {
 .day-machine {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fffef8;
+  background: var(--paper);
   padding: 10px;
   display: grid;
   gap: 8px;
@@ -718,7 +718,7 @@ button.primary {
 
 .day-machine.is-focused {
   border-color: rgba(49, 120, 92, 0.62);
-  background: #f7fbef;
+  background: var(--soft);
   box-shadow: inset 4px 0 0 rgba(49, 120, 92, 0.32);
 }
 
@@ -992,7 +992,7 @@ button.primary {
   align-items: center;
   gap: 8px;
   padding: 10px;
-  background: #fff8df;
+  background: var(--editor);
   border-top: 2px solid var(--ink);
 }
 .table-actions .add-workout-button {
@@ -1022,4 +1022,79 @@ button.primary {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+:root {
+  --editor: #fff8df;
+  --suggested: #fff3d5;
+  --suggested-open: #fff2cc;
+  --field: #ffffff;
+  --add-day-col-width: 132px;
+}
+body[data-theme="tide"] {
+  --ink: #153745; --muted: #587381; --bg: #eef6fa; --paper: #fafdff;
+  --green: #21677b; --lime: #bde6eb; --soft: #e1f0f4; --line: #c9dde5;
+  --editor: #e9f5fa; --suggested: #fff1d9; --suggested-open: #ffeaca;
+}
+body[data-theme="moon"] {
+  --ink: #342848; --muted: #766585; --bg: #f3eef8; --paper: #fffcff;
+  --green: #68518a; --lime: #decdf2; --soft: #ece3f4; --line: #ddd2e8;
+  --editor: #f3eafa; --suggested: #fff0de; --suggested-open: #ffe9d1;
+}
+body[data-theme="sunrise"] {
+  --ink: #493026; --muted: #86695d; --bg: #fff3e9; --paper: #fffdf8;
+  --green: #a34f35; --lime: #ffdcad; --soft: #fce8d8; --line: #ead5c6;
+  --editor: #fff0db; --suggested: #ffe8cb; --suggested-open: #ffe1bb;
+}
+.hero { display: flex; align-items: center; gap: 14px; }
+.hero-logo { width: 64px; height: 64px; object-fit: contain; flex: 0 0 auto; }
+.bottom-settings { display: flex; justify-content: center; padding: 8px 0 18px; }
+.bottom-settings .settings-button { width: auto; min-height: 42px; display: flex; gap: 12px; padding: 0 14px; font-size: 0.8rem; background: var(--paper); box-shadow: none; }
+.sheet-footer { display: block; }
+.training-note { max-width: none; line-height: 1.5; }
+.table-add-buttons { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.table-add-buttons .add-workout-button { flex: 1; justify-content: flex-start; font-size: 0.88rem; white-space: nowrap; }
+.add-day-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; width: 100%; }
+.add-day-form[hidden] { display: none; }
+.add-day-form label { flex: 1; }
+.add-day-form input { font-size: 16px; }
+.machine-table .history-more-col { width: 132px; text-transform: none; background: var(--paper); }
+.history-more-col .older-button { display: block; width: 100%; min-height: 36px; padding: 5px; border: 0; background: transparent; color: var(--muted); font-size: 0.7rem; line-height: 1.3; box-shadow: none; }
+.history-more-col .older-button:hover { color: var(--green); background: var(--soft); transform: none; }
+.history-end { font-size: 0.65rem; font-weight: 650; color: var(--muted); }
+.history-spacer { width: 132px; }
+.date-label { display: grid; gap: 2px; place-items: center; min-height: 32px; }
+.history-entry-button.empty-cell { display: inline-grid; place-items: center; min-height: 38px; min-width: 54px; padding: 0 9px; border: 1px dashed var(--line); background: transparent; color: var(--muted); box-shadow: none; }
+.same-button { width: 38px; height: 38px; border: 0; background: transparent; box-shadow: none; }
+.empty-ring { width: 23px; height: 23px; border: 1.5px dashed color-mix(in srgb, var(--muted) 50%, transparent); border-radius: 50%; }
+.same-button:hover { background: var(--soft); box-shadow: none; transform: none; }
+.same-button:hover .empty-ring { border-style: solid; border-color: var(--green); }
+.ghost-weight { font-weight: 650; opacity: 0.7; }
+.settings-modal { position: fixed; inset: 0; padding: 16px; display: grid; place-items: center; }
+.settings-panel { max-height: calc(100dvh - 32px); gap: 16px; }
+.settings-actions { grid-template-columns: 1fr; }
+.palette-setting { margin: 0; padding: 0; border: 0; min-width: 0; }
+.palette-setting legend { margin-bottom: 8px; color: var(--muted); text-transform: uppercase; font-size: 0.74rem; font-weight: 950; }
+.palette-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.palette-picker button { display: grid; place-items: center; gap: 6px; min-width: 0; padding: 10px 4px; font-size: 0.7rem; border: 1px solid var(--line); background: var(--field); }
+.palette-picker button[aria-pressed="true"] { border: 2px solid var(--green); background: var(--soft); }
+.palette-swatch { width: 30px; height: 22px; border-radius: 6px; border: 1px solid rgba(0,0,0,.12); }
+.palette-swatch.garden { background: linear-gradient(135deg,#31785c 50%,#cfe889 50%); }
+.palette-swatch.tide { background: linear-gradient(135deg,#21677b 50%,#bde6eb 50%); }
+.palette-swatch.moon { background: linear-gradient(135deg,#68518a 50%,#decdf2 50%); }
+.palette-swatch.sunrise { background: linear-gradient(135deg,#a34f35 50%,#ffdcad 50%); }
+.advanced-settings { border-top: 1px solid var(--line); padding-top: 12px; }
+.advanced-settings summary { font-size: 0.85rem; color: var(--muted); cursor: pointer; font-weight: 750; }
+.advanced-panel { display: grid; gap: 12px; padding-top: 14px; }
+.advanced-panel a { color: var(--green); font-weight: 800; }
+[data-close-settings], [data-close-workout], [data-close-detail] { transition: transform 240ms ease, background 180ms ease, color 180ms ease; }
+[data-close-settings]:hover, [data-close-workout]:hover, [data-close-detail]:hover { transform: rotate(90deg); background: var(--ink); color: var(--paper); box-shadow: none; }
+@media (max-width: 760px) {
+  :root { --add-day-col-width: 132px; }
+  .hero { padding: 14px; gap: 12px; }
+  .hero-logo { width: 48px; height: 48px; }
+  .hero h1 { font-size: clamp(2.2rem, 10vw, 3rem); }
+  .settings-modal { inset: 0; padding: 12px; }
+  .settings-panel { max-height: calc(100dvh - 24px); }
+  .table-add-buttons .add-workout-button { padding: 0 8px; font-size: 0.8rem; }
 }

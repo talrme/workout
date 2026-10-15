@@ -9,15 +9,13 @@
   <link rel="icon" href="dumbell-2.png?v=20261014" type="image/png">
   <link rel="apple-touch-icon" href="dumbell-2.png?v=20261014">
   <link rel="manifest" href="manifest.webmanifest?v=20261014-dumbbell-2">
-  <link rel="stylesheet" href="styles.css?v=20261014-history-controls">
+  <link rel="stylesheet" href="styles.css?v=20261014-workout-refresh">
 </head>
 <body>
   <main class="app-shell">
     <header class="hero">
+      <img class="hero-logo" src="dumbell-2.png?v=20261014" width="64" height="64" alt="">
       <h1>Workout</h1>
-      <button type="button" class="settings-button" data-open-settings aria-label="Open settings" title="Settings">
-        <span class="settings-glyph" aria-hidden="true"></span>
-      </button>
     </header>
 
     <section class="machine-panel" aria-label="Workout machines">
@@ -35,12 +33,11 @@
     </section>
 
     <footer class="sheet-footer">
-      <div class="footer-copy">
-        <span class="sync-pill" data-sync-note>Loading sheet...</span>
-        <p class="training-note"><strong>Goal:</strong> last reps around RPE 7 -> 8 -> 9 across sets, about 3, 2, then 1 clean rep left.</p>
-      </div>
-      <a data-sheet-link href="https://docs.google.com/spreadsheets/d/1iOg845q_IxXqVDmVxSjuRTdEVA19JaLvECDnTK-BL3Y/edit?gid=868528902#gid=868528902" target="_blank" rel="noreferrer">Google Sheet</a>
+      <p class="training-note"><strong>Goal:</strong> Last 2 reps: effort <strong>7/10 in set 1</strong>, <strong>8/10 in set 2</strong>, and <strong>9/10 in set 3</strong>.</p>
     </footer>
+    <div class="bottom-settings">
+      <button type="button" class="settings-button" data-open-settings aria-label="Open settings" title="Settings"><span class="settings-glyph" aria-hidden="true"></span><span>Settings</span></button>
+    </div>
   </main>
 
   <div class="modal-backdrop" data-settings-backdrop hidden></div>
@@ -51,51 +48,31 @@
           <p class="eyebrow">Workout</p>
           <h2 id="settings-title">Settings</h2>
         </div>
-        <button type="button" data-close-settings aria-label="Close settings">x</button>
+        <button type="button" data-close-settings aria-label="Close settings">×</button>
       </header>
-      <label>
-        <span>Name</span>
-        <input data-profile-name type="text" autocomplete="name" placeholder="Tal">
-      </label>
-      <label class="toggle-row">
-        <span>Auto sync</span>
-        <input type="checkbox" data-auto-sync>
-      </label>
-      <label class="toggle-row">
-        <span>Reduce motion</span>
-        <input type="checkbox" data-reduce-motion>
-      </label>
-      <label class="toggle-row">
-        <span>Hide today's notes from table</span>
-        <input type="checkbox" data-hide-today-notes>
-      </label>
-      <div class="settings-actions">
-        <button type="button" class="primary" data-save-settings>Save</button>
-        <button type="button" data-reset-site>Reset local</button>
-      </div>
-    </div>
-  </section>
-
-  <div class="modal-backdrop" data-date-backdrop hidden></div>
-  <section class="date-modal" data-date-modal hidden role="dialog" aria-modal="true" aria-labelledby="date-title">
-    <div class="date-panel">
-      <header>
-        <div>
-          <p class="eyebrow">Workout day</p>
-          <h2 id="date-title" data-date-title>Edit day</h2>
+      <fieldset class="palette-setting">
+        <legend>Color scheme</legend>
+        <div class="palette-picker">
+          <button type="button" data-theme="garden" aria-pressed="true"><span class="palette-swatch garden" aria-hidden="true"></span>Garden</button>
+          <button type="button" data-theme="tide" aria-pressed="false"><span class="palette-swatch tide" aria-hidden="true"></span>Tide</button>
+          <button type="button" data-theme="moon" aria-pressed="false"><span class="palette-swatch moon" aria-hidden="true"></span>Moon</button>
+          <button type="button" data-theme="sunrise" aria-pressed="false"><span class="palette-swatch sunrise" aria-hidden="true"></span>Sunrise</button>
         </div>
-        <button type="button" data-close-date aria-label="Close date editor">x</button>
-      </header>
-      <label class="date-field">
-        <span>Date</span>
-        <input data-edit-date type="date">
-      </label>
-      <div class="day-machine-list" data-day-machine-list></div>
-      <div class="date-actions">
-        <button type="button" class="primary" data-save-date>Save day</button>
-        <button type="button" class="danger" data-delete-date>Delete day</button>
-        <button type="button" data-cancel-date>Cancel</button>
-      </div>
+      </fieldset>
+      <label class="toggle-row"><span>Show workout notes</span><input type="checkbox" data-show-notes></label>
+      <label class="toggle-row"><span>Show setup notes in table</span><input type="checkbox" data-show-setup></label>
+      <details class="advanced-settings">
+        <summary>Advanced settings</summary>
+        <div class="advanced-panel">
+          <label><span>Name</span><input data-profile-name type="text" autocomplete="name" placeholder="Tal"></label>
+          <label class="toggle-row"><span>Auto sync</span><input type="checkbox" data-auto-sync></label>
+          <label class="toggle-row"><span>Reduce motion</span><input type="checkbox" data-reduce-motion></label>
+          <a data-sheet-link href="https://docs.google.com/spreadsheets/d/1iOg845q_IxXqVDmVxSjuRTdEVA19JaLvECDnTK-BL3Y/edit" target="_blank" rel="noreferrer">Google Sheet ↗</a>
+          <span class="sync-pill" data-sync-note>Loading sheet...</span>
+          <button type="button" class="danger" data-reset-site>Reset local</button>
+        </div>
+      </details>
+      <div class="settings-actions"><button type="button" class="primary" data-save-settings>Save</button></div>
     </div>
   </section>
 
@@ -107,7 +84,7 @@
           <p class="eyebrow">New row</p>
           <h2 id="workout-title">Add workout</h2>
         </div>
-        <button type="button" data-close-workout aria-label="Close add workout">x</button>
+        <button type="button" data-close-workout aria-label="Close add workout">×</button>
       </header>
       <div class="workout-fields">
         <label>
@@ -141,6 +118,6 @@
   </section>
 
   <script src="config.js?v=20260918-mobile-add-day"></script>
-  <script src="app.js?v=20261014-history-controls"></script>
+  <script src="app.js?v=20261014-workout-refresh"></script>
 </body>
 </html>

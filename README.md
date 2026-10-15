@@ -13,25 +13,24 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 
 ## What The App Shows
 
-- Seven machines plus planks, grouped into legs, upper body, core, and physical therapy
-- A compact table of recent workout dates
-- Dates displayed newest-to-oldest, with `Today` first for easier phone use
-- One row per machine
-- Recent weights for each machine/date
-- Date headers that quietly show the day label and date, like `Today` and `9/14`
-- A soft checkmark for quickly logging today's set at the previous weight
-- A green checked weight once today's set has been logged; tap the number to edit, or the separate checkmark to uncheck today
-- Subtle today's notes under logged values, with a local setting to hide them from the table
-- Compact machine details with today's weight and setup notes, an expandable More options section for today's note, and a prominent Save button and smaller, labeled Remove/Close icons
-- Clickable date headers for editing or deleting a whole workout day
-- Clickable previous-day values for editing or deleting one machine entry on that date
-- A small right-side `Add Day` button for adding a different date, such as yesterday
-- Gentle suggested workout highlighting when a machine has not been done in the last 3 workout days
-- A left-aligned `Add workout` button below the scrolling table for adding a custom machine/exercise into Legs, Upper body, Core, Physical therapy, or Other
-- A home-screen icon via `dumbell-2.png` and `manifest.webmanifest`
-- Automatic Google Sheet sync on page open, when the page returns to the foreground, and for a short catch-up window after opening or saving
-
-The current UI keeps logging intentionally simple: a value plus an optional note. For machines, that value is weight; for planks, it is time, like `30s`. The backend can still accept older fields like reps, effort, and reps in reserve, but the website no longer shows them.
+- Exercise rows grouped into legs, upper body, core, physical therapy, and other
+- Today plus four recent dates, newest first; Show older entries at the far right reveals five more dates, and Recent only restores the initial view
+- A subtle empty dashed ring for unlogged workouts; tapping it logs the previous weight
+- Completed workouts show a green check and weight; tap the check to uncheck today, or the number to edit
+- Every past date cell, including an empty dash, opens the same compact inline editor for that exercise and date
+- Inline editors show weight/time and setup notes, with a collapsible More options section for the workout note
+- A prominent Save button with smaller Remove and rotating Close icons
+- Outside taps save and collapse the open editor before handling the tapped control
+- Gentle phone scrolling only when needed to fit the editor in the upper half, accounting for keyboard space and reduced-motion preferences
+- Add workout and Add day buttons below the table stay visible during horizontal scrolling
+- Add day opens a small date picker; Add column creates a blank date column without inventing workout records. Empty added dates are stored on this device; saved entries sync through the existing Sheet backend
+- Workout logo next to the title, and the goal: last 2 reps at effort 7/10, 8/10, and 9/10 across sets 1, 2, and 3
+- Settings at the bottom, opening in a vertically centered dialog with keyboard focus containment and Escape support
+- Garden, Tide, Moon, and Sunrise color schemes, plus separate controls for workout notes and setup previews
+- Advanced settings for profile name, auto sync, reduced motion, Google Sheet link, sync status, and Reset local
+- Preferences persist on this device; theme choices preview and save immediately, while the Save button applies the other settings
+- The new dumbbell PNG supplies the favicon and phone icon
+- Existing Google Sheet synchronization on open, return to foreground, and short catch-up windows after saving
 
 ## Big Picture
 
@@ -161,7 +160,3 @@ Google's web app docs describe this deployment model here: https://developers.go
 ## Security Note
 
 This is intentionally low-security and simple. Anyone with the deployed Apps Script URL can write to the Sheet. Because `config.js` is loaded by the browser, the Apps Script URL is visible to anyone who can view the site files. That is fine for a personal prototype, but not for sensitive data.
-
-Phone editing keeps the current scroll position when the workout and editor fit in the upper half of the screen. Otherwise it smoothly scrolls only as far as needed, accounting for keyboard space and respecting reduced-motion preferences. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.
-
-The table initially shows today and four previous workout dates. Older entries reveals five more dates per click; Recent only restores the initial view. History controls and Add workout remain outside horizontal table scrolling. Clicking outside an open editor saves and collapses it before handling another control, including another checkmark. Clicking the same workout heading closes its editor.

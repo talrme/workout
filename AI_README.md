@@ -21,23 +21,24 @@ GitHub repo: https://github.com/talrme/workout
 
 ## Product Behavior
 
-The app shows:
-
-- Seven workout machines plus planks, grouped into legs, upper body, core, and physical therapy
-- A compact table with recent dates as columns
-- Dates render newest-to-oldest, with `Today` as the first date column so phone users see the action column immediately
-- The latest logged weight per machine/date
-- Date headers show a subtle day/date pair, such as `Today` over `9/14`, rather than completion counts
-- A soft checkmark in today's column that repeats the previous logged weight
-- A green checked weight after today's set is logged; tap the number to edit, or the separate checkmark to uncheck today
-- Subtle today's notes under logged values, controlled by the browser-local `hideTodayNotes` setting
-- Compact accordion details with today's weight and setup notes, More options for today's note, and a prominent Save button and smaller, labeled Remove/Close icons
-- Date headers open a whole-day editor for all machine weights/notes on that date
-- A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
-- A left-aligned `Add workout` button below the scrolling table creates custom rows with a section, starting weight, and setup notes
-- `dumbell-2.png` plus `manifest.webmanifest` provide the favicon and phone/home-screen icon
-
-The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs. Plank duration is stored in the existing `weight` field as a display string such as `30s`, while the UI labels that row as `Time`.
+- Exercise rows grouped into legs, upper body, core, physical therapy, and other
+- Today plus four recent dates, newest first; Show older entries at the far right reveals five more dates, and Recent only restores the initial view
+- A subtle empty dashed ring for unlogged workouts; tapping it logs the previous weight
+- Completed workouts show a green check and weight; tap the check to uncheck today, or the number to edit
+- Every past date cell, including an empty dash, opens the same compact inline editor for that exercise and date
+- Inline editors show weight/time and setup notes, with a collapsible More options section for the workout note
+- A prominent Save button with smaller Remove and rotating Close icons
+- Outside taps save and collapse the open editor before handling the tapped control
+- Gentle phone scrolling only when needed to fit the editor in the upper half, accounting for keyboard space and reduced-motion preferences
+- Add workout and Add day buttons below the table stay visible during horizontal scrolling
+- Add day opens a small date picker; Add column creates a blank date column without inventing workout records. Empty added dates are stored on this device; saved entries sync through the existing Sheet backend
+- Workout logo next to the title, and the goal: last 2 reps at effort 7/10, 8/10, and 9/10 across sets 1, 2, and 3
+- Settings at the bottom, opening in a vertically centered dialog with keyboard focus containment and Escape support
+- Garden, Tide, Moon, and Sunrise color schemes, plus separate controls for workout notes and setup previews
+- Advanced settings for profile name, auto sync, reduced motion, Google Sheet link, sync status, and Reset local
+- Preferences persist on this device; theme choices preview and save immediately, while the Save button applies the other settings
+- The new dumbbell PNG supplies the favicon and phone icon
+- Existing Google Sheet synchronization on open, return to foreground, and short catch-up windows after saving
 
 ## Backend Model
 
@@ -136,7 +137,3 @@ If `backend.sample.gs` changes, the README should also mention redeploying via `
 ## Security
 
 This is intentionally simple and permissive for prototyping. Anyone with the Apps Script URL can write to the Sheet via the script. Do not use this for sensitive data without adding authentication or validation.
-
-Phone editing keeps the current scroll position when the workout and editor fit in the upper half of the screen. Otherwise it smoothly scrolls only as far as needed, accounting for keyboard space and respecting reduced-motion preferences. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.
-
-The table initially shows today and four previous workout dates. Older entries reveals five more dates per click; Recent only restores the initial view. History controls and Add workout remain outside horizontal table scrolling. Clicking outside an open editor saves and collapses it before handling another control, including another checkmark. Clicking the same workout heading closes its editor.

@@ -48,6 +48,7 @@ let profiles = {};
 let pendingWrites = [];
 let requestedUserId = new URL(window.location.href).searchParams.get("user") || "";
 let newUserDraft = null;
+let installPrompt = null;
 let pendingDayDeletion = null;
 let pendingArchiveId = "";
 let undoArchiveId = "";
@@ -232,6 +233,8 @@ function render() {
   renderArchivedWorkouts();
   renderUserSettings();
   renderDayDeleteUndo();
+  updateInstallManifest();
+  if (document.querySelector("[data-share-dialog]").open) renderShareDetails();
   document.body.classList.toggle("detail-open", Boolean(state.expandedId));
 }
 
@@ -499,7 +502,7 @@ function detailRow(machine, colspan) {
   return `
     <tr class="detail-row">
       <td colspan="${colspan}">
-        <div class="detail-panel" data-detail-panel="${escapeHtml(machine.id)}">
+        <div class="detail-panel" data-detail-panel="${escapeHtml(machine.id)}" data-initial-weight="${escapeHtml(String(todayLog?.weight || previous || "").trim())}" data-initial-note="${escapeHtml(String(todayLog?.note || "").trim())}" data-initial-setup="${escapeHtml(String(machine.setupNotes || "").trim())}">
           <div class="detail-grid">
             <label>
               <span>${escapeHtml(dateLabel)} ${escapeHtml(valueLabel(machine).toLowerCase())}</span>
@@ -514,7 +517,7 @@ function detailRow(machine, colspan) {
             <summary>More options</summary>
             <label>
               <span>${isToday ? "Today’s note" : "Workout note"}</span>
-              <input data-today-note type="text" value="${escapeHtml(todayLog?.note || "")}" placeholder="Felt smooth, seat tweak, etc.">
+              <input data-today-note type="text" value="${escapeHtml(todayLog?.note || "")}">
             </label>
           </details>
           <div class="detail-actions">
@@ -638,7 +641,7 @@ function defaultValue(machine) {
 }
 
 function inputAttributes(machine) {
-  if (machine.valueLabel === "Time") return `type="text" inputmode="text" placeholder="30s"`;
+  if (machine.valueLabel === "Time") return `type="text" inputmode="text"`;
   return `type="number" min="0" step="5" inputmode="decimal"`;
 }
 
@@ -726,18 +729,17 @@ function saveDetail(machineId, options = {}) {
   const weight = panel.querySelector("[data-today-weight]").value.trim();
   const note = panel.querySelector("[data-today-note]").value.trim();
   const date = state.expandedDate || isoDate(new Date());
-  const todayLog = latestLogFor(machineId, date);
-  const updatedMachine = { ...machine, setupNotes };
-  const setupChanged = setupNotes !== String(machine.setupNotes || "");
+  const setupChanged = setupNotes !== panel.dataset.initialSetup;
   const logChanged = Boolean(weight || note)
-    && (String(todayLog?.weight || "") !== weight || String(todayLog?.note || "") !== note);
+    && (panel.dataset.initialWeight !== weight || panel.dataset.initialNote !== note);
 
+  const updatedMachine = setupChanged ? { ...machine, setupNotes } : machine;
   state.machines = state.machines.map((item) => item.id === machineId ? updatedMachine : item);
   if (logChanged) appendLogForDate(updatedMachine, date, { weight, note }, { renderAfter: false });
   state.expandedId = "";
   saveState();
   if (options.renderAfter !== false) render();
-  if (setupChanged) syncMachine(updatedMachine);
+  if (setupChanged) syncMachine(backendReady ? { id: machineId, setupNotes } : updatedMachine);
 }
 
 function removeToday(machineId) {
@@ -1202,7 +1204,100 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+function profileLink() {
+  const url = new URL(".", window.location.href);
+  url.searchParams.set("user", state.activeUserId);
+  return url.toString();
+}
+
+function renderShareDetails() {
+  const input = document.querySelector("[data-share-url]");
+  const link = profileLink();
+  if (input.value !== link) document.querySelector("[data-copy-status]").textContent = "";
+  input.value = link;
+  document.querySelector("[data-share-profile]").textContent = `This link opens ${currentUser().name}’s workouts.`;
+  document.querySelector("[data-install-app]").hidden = !installPrompt;
+}
+
+function openShareDialog() {
+  closeExpandedDetail();
+  renderShareDetails();
+  document.querySelector("[data-copy-status]").textContent = "";
+  document.querySelector("[data-share-dialog]").showModal();
+  document.body.classList.add("is-modal-open");
+  document.querySelector("[data-close-share]").focus({ preventScroll: true });
+}
+
+async function copyProfileLink() {
+  const url = profileLink();
+  const status = document.querySelector("[data-copy-status]");
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Use selection");
+    await navigator.clipboard.writeText(url);
+    status.textContent = "Link copied.";
+  } catch {
+    const input = document.querySelector("[data-share-url]");
+    input.value = url;
+    input.focus();
+    input.select();
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch { /* Manual copy remains available. */ }
+    status.textContent = copied ? "Link copied." : "Link selected. Touch and hold to copy, or use your keyboard’s Copy command.";
+  }
+}
+
+async function shareProfileLink() {
+  if (!navigator.share) { await copyProfileLink(); return; }
+  try { await navigator.share({ title: `Workout — ${currentUser().name}`, url: profileLink() }); }
+  catch (error) { if (error.name !== "AbortError") await copyProfileLink(); }
+}
+
+function updateInstallManifest() {
+  // A stable HTTPS manifest URL lets installed apps fetch future updates.
+  // The tiny install worker serves only profile-specific manifests; no page/data caching.
+  const controller = navigator.serviceWorker?.controller;
+  if (!controller || new URL(controller.scriptURL).pathname !== new URL("install-worker.js", window.location.href).pathname) return;
+  const link = document.querySelector('link[rel="manifest"]');
+  const manifest = new URL("manifest.webmanifest", window.location.href);
+  manifest.searchParams.set("user", state.activeUserId);
+  manifest.searchParams.set("v", "20261015-share");
+  if (link.href !== manifest.toString()) link.href = manifest.toString();
+}
+
+function setupInstallSupport() {
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    installPrompt = event;
+    document.querySelector("[data-install-app]").hidden = false;
+  });
+  window.addEventListener("appinstalled", () => {
+    installPrompt = null;
+    document.querySelector("[data-install-app]").hidden = true;
+  });
+  if ("serviceWorker" in navigator && /^https?:$/.test(window.location.protocol)) {
+    navigator.serviceWorker.addEventListener("controllerchange", updateInstallManifest);
+    navigator.serviceWorker.register("./install-worker.js").then(() => navigator.serviceWorker.ready).then(updateInstallManifest).catch(() => {});
+  }
+}
+
 function bindEvents() {
+  const shareDialog = document.querySelector("[data-share-dialog]");
+  document.querySelector("[data-open-share]").addEventListener("click", openShareDialog);
+  document.querySelector("[data-close-share]").addEventListener("click", () => shareDialog.close());
+  shareDialog.addEventListener("click", event => { if (event.target === shareDialog) shareDialog.close(); });
+  shareDialog.addEventListener("close", () => {
+    if (els.settingsModal.hidden && els.workoutModal.hidden) document.body.classList.remove("is-modal-open");
+    document.querySelector("[data-open-share]").focus({ preventScroll: true });
+  });
+  document.querySelector("[data-copy-link]").addEventListener("click", copyProfileLink);
+  document.querySelector("[data-native-share]").addEventListener("click", shareProfileLink);
+  document.querySelector("[data-install-app]").addEventListener("click", async () => {
+    if (!installPrompt) return;
+    const prompt = installPrompt;
+    installPrompt = null;
+    document.querySelector("[data-install-app]").hidden = true;
+    await prompt.prompt();
+  });
   document.querySelector("[data-open-settings]").addEventListener("click", openSettings);
   document.querySelector("[data-close-settings]").addEventListener("click", closeSettings);
   document.querySelector("[data-save-settings]").addEventListener("click", saveSettings);
@@ -1403,6 +1498,7 @@ function init() {
   loadState();
   bindEvents();
   render();
+  setupInstallSupport();
   if (state.settings.autoSync) {
     triggerAutoSync();
   } else {

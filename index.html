@@ -9,7 +9,7 @@
   <link rel="icon" href="dumbell-2.png?v=20261014" type="image/png">
   <link rel="apple-touch-icon" href="dumbell-2.png?v=20261014">
   <link rel="manifest" href="manifest.webmanifest?v=20261014-dumbbell-2">
-  <link rel="stylesheet" href="styles.css?v=20261015-delete-day">
+  <link rel="stylesheet" href="styles.css?v=20261015-share-view">
 </head>
 <body>
   <main class="app-shell">
@@ -40,6 +40,7 @@
       <p class="training-note"><strong>Goal:</strong> Last 2 reps: effort <strong>7/10 in set 1</strong>, <strong>8/10 in set 2</strong>, and <strong>9/10 in set 3</strong>.</p>
     </footer>
     <div class="bottom-settings">
+      <button type="button" class="settings-button" data-open-share><svg class="share-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10.5 6-4M9 13.5l6 4"/></svg><span>Save / Share</span></button>
       <button type="button" class="settings-button" data-open-settings aria-label="Open settings" title="Settings"><span class="settings-glyph" aria-hidden="true"></span><span>Settings</span></button>
     </div>
   </main>
@@ -115,7 +116,7 @@
       <div class="workout-fields">
         <label>
           <span>Name</span>
-          <input data-workout-name type="text" placeholder="Calf Raise">
+          <input data-workout-name type="text">
         </label>
         <label>
           <span>Section</span>
@@ -129,12 +130,12 @@
         </label>
         <label>
           <span>Starting weight</span>
-          <input data-workout-default type="text" placeholder="50">
+          <input data-workout-default type="text">
         </label>
       </div>
       <label>
         <span>Setup notes</span>
-        <textarea data-workout-setup rows="3" placeholder="Seat, form, or reminder"></textarea>
+        <textarea data-workout-setup rows="3"></textarea>
       </label>
       <div class="workout-actions">
         <button type="button" class="primary" data-save-workout>Save workout</button>
@@ -155,7 +156,21 @@
     <div class="archive-dialog-actions"><button type="button" data-cancel-day-delete autofocus>Keep day</button><button type="button" class="danger" data-confirm-day-delete>Delete day</button></div>
   </dialog>
 
+  <dialog class="share-dialog archive-dialog" data-share-dialog aria-labelledby="share-title">
+    <div class="archive-dialog-header"><div><p class="eyebrow">Keep it handy</p><h2 id="share-title">Save / Share</h2></div><button type="button" data-close-share aria-label="Close Save and Share">×</button></div>
+    <section class="save-app-panel">
+      <div class="save-app-heading"><img src="dumbell-2.png?v=20261014" width="44" height="44" alt=""><div><h3>Save to your phone</h3><p>Add Workout to your home screen.</p></div></div>
+      <div class="install-steps">
+        <section><h4>iPhone / iPad</h4><p>Open this link in Safari → Share → Add to Home Screen. Choose Open as Web App if shown, then Add.</p></section>
+        <section><h4>Android</h4><p>Open this link in Chrome → ⋮ → Install and create shortcut → Install. Some versions say Add to Home screen or Install app.</p></section>
+      </div>
+      <button type="button" class="primary" data-install-app hidden>Install app</button>
+      <details class="install-help"><summary>Android says it’s already installed?</summary><p>Swipe up to All Apps and search for Workout. If it won’t open, go to Android Settings → Apps → See all apps → Workout → Uninstall, then reopen this profile link in Chrome and install again.</p><p>Check that your workouts have synced in Advanced settings before reinstalling. You don’t need to clear Chrome’s site data.</p></details>
+    </section>
+    <section class="share-link-panel"><h3>Share this profile</h3><p data-share-profile></p><label><span>Profile link</span><input type="url" data-share-url readonly></label><div class="share-link-actions"><button type="button" class="primary" data-copy-link>Copy link</button><button type="button" data-native-share>Share…</button></div><p class="copy-status" data-copy-status role="status"></p></section>
+  </dialog>
+
   <script src="config.js?v=20260918-mobile-add-day"></script>
-  <script src="app.js?v=20261015-delete-day"></script>
+  <script src="app.js?v=20261015-share-view"></script>
 </body>
 </html>

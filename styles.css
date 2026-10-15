@@ -1150,3 +1150,27 @@ button:disabled, select:disabled { opacity: .5; cursor: default; transform: none
 .delete-day-button:disabled { opacity: .18; }
 [data-close-day-delete] { flex: 0 0 36px; width: 36px; min-height: 36px; padding: 0; font-size: 1.2rem; }
 [data-close-day-delete]:hover { transform: rotate(90deg); background: var(--ink); color: var(--paper); box-shadow: none; }
+
+.bottom-settings { gap: 12px; flex-wrap: wrap; }
+.share-glyph { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+.share-dialog { width: min(500px, calc(100vw - 24px)); }
+.share-dialog h3 { margin: 0 0 6px; font-size: 1rem; }
+.share-dialog h4 { margin: 0 0 5px; font-size: .85rem; }
+.share-dialog p { margin: 0 0 10px; font-size: .82rem; }
+.save-app-panel { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.save-app-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.save-app-heading img { object-fit: contain; flex-shrink: 0; }
+.save-app-heading p { margin: 0; }
+.install-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.install-steps section { padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+.install-steps p { margin: 0; }
+.install-help { margin-top: 12px; }
+.install-help summary { color: var(--muted); font-size: .8rem; font-weight: 750; cursor: pointer; }
+.install-help p { margin-top: 8px; }
+.share-link-panel { padding-top: 14px; }
+.share-link-panel input { font-size: 16px; font-weight: 650; }
+.share-link-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.share-dialog .copy-status { margin: 8px 0 0; min-height: 1.4em; color: var(--green); }
+[data-close-share] { flex: 0 0 36px; width: 36px; min-height: 36px; padding: 0; font-size: 1.2rem; transition: transform 240ms ease; }
+[data-close-share]:hover { transform: rotate(90deg); background: var(--ink); color: var(--paper); box-shadow: none; }
+@media (max-width: 430px) { .install-steps { grid-template-columns: 1fr; } }

@@ -27,7 +27,7 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - Workout logo next to the title, and the goal: last 2 reps at effort 7/10, 8/10, and 9/10 across sets 1, 2, and 3
 - Settings at the bottom, opening in a vertically centered dialog with keyboard focus containment and Escape support
 - Garden, Tide, Moon, and Sunrise color schemes, plus separate controls for workout notes and setup previews
-- Advanced settings for profile name, auto sync, reduced motion, Google Sheet link, sync status, and Reset local
+- Advanced settings for profile name, auto sync, reduced motion, Google Sheet link, sync status, and Reset to default settings
 - Highlight missed workouts is enabled by default and can be disabled in Settings. It flags exercises missing from all of the last three distinct workout days with visible logs; fewer than three days do not trigger highlights. Disabling it hides both highlights and their legend.
 - Preferences persist on this device; theme choices preview and save immediately, while the Save button applies the other settings
 - The new dumbbell PNG supplies the favicon and phone icon
@@ -161,3 +161,5 @@ Google's web app docs describe this deployment model here: https://developers.go
 ## Security Note
 
 This is intentionally low-security and simple. Anyone with the deployed Apps Script URL can write to the Sheet. Because `config.js` is loaded by the browser, the Apps Script URL is visible to anyone who can view the site files. That is fine for a personal prototype, but not for sensitive data.
+
+Reset to default settings restores only preferences. It preserves workout logs, exercises and setup notes, added date columns, and the configured Sheet connection. It does not clear browser storage.

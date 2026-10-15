@@ -18,13 +18,7 @@ const DEFAULT_MACHINES = [
   { id: "plank", name: "Plank", group: "Core", seedWeight: "30s", valueLabel: "Time", setupNotes: "Start with 30 seconds. Keep hips steady and breathe." }
 ];
 
-const state = {
-  machines: DEFAULT_MACHINES.map((machine) => ({ ...machine })),
-  logs: [],
-  expandedId: "",
-  expandedDate: "",
-  extraDates: [],
-  settings: {
+const DEFAULT_SETTINGS = {
     backendUrl: window.WORKOUT_CONFIG?.defaultBackendUrl || "",
     profileName: "Tal",
     autoSync: window.WORKOUT_CONFIG?.autoSync ?? true,
@@ -33,7 +27,15 @@ const state = {
     showSetupNotes: true,
     highlightMissedWorkouts: true,
     theme: "garden"
-  }
+  };
+
+const state = {
+  machines: DEFAULT_MACHINES.map((machine) => ({ ...machine })),
+  logs: [],
+  expandedId: "",
+  expandedDate: "",
+  extraDates: [],
+  settings: { ...DEFAULT_SETTINGS }
 };
 
 let syncTimer = 0;
@@ -833,10 +835,15 @@ function saveSettings() {
   }
 }
 
-function resetSite() {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(OLD_STORAGE_KEY);
-  window.location.reload();
+function resetSettings() {
+  const backendUrl = state.settings.backendUrl;
+  state.settings = { ...DEFAULT_SETTINGS, backendUrl };
+  saveState();
+  renderSettings();
+  render();
+  if (state.settings.autoSync) triggerAutoSync();
+  else stopAutoSync();
+  setSyncNote("Default settings restored");
 }
 
 function isoDate(date) {
@@ -874,7 +881,7 @@ function bindEvents() {
   document.querySelector("[data-open-settings]").addEventListener("click", openSettings);
   document.querySelector("[data-close-settings]").addEventListener("click", closeSettings);
   document.querySelector("[data-save-settings]").addEventListener("click", saveSettings);
-  document.querySelector("[data-reset-site]").addEventListener("click", resetSite);
+  document.querySelector("[data-reset-site]").addEventListener("click", resetSettings);
   els.settingsBackdrop.addEventListener("click", closeSettings);
   document.querySelector("[data-close-workout]").addEventListener("click", closeWorkoutModal);
   document.querySelector("[data-cancel-workout]").addEventListener("click", closeWorkoutModal);

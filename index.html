@@ -9,7 +9,7 @@
   <link rel="icon" href="dumbell-2.png?v=20261014" type="image/png">
   <link rel="apple-touch-icon" href="dumbell-2.png?v=20261014">
   <link rel="manifest" href="manifest.webmanifest?v=20261014-dumbbell-2">
-  <link rel="stylesheet" href="styles.css?v=20261014-missed-workouts">
+  <link rel="stylesheet" href="styles.css?v=20261014-reset-settings">
 </head>
 <body>
   <main class="app-shell">
@@ -70,7 +70,8 @@
           <label class="toggle-row"><span>Reduce motion</span><input type="checkbox" data-reduce-motion></label>
           <a data-sheet-link href="https://docs.google.com/spreadsheets/d/1iOg845q_IxXqVDmVxSjuRTdEVA19JaLvECDnTK-BL3Y/edit" target="_blank" rel="noreferrer">Google Sheet ↗</a>
           <span class="sync-pill" data-sync-note>Loading sheet...</span>
-          <button type="button" class="danger" data-reset-site>Reset local</button>
+          <button type="button" class="danger" data-reset-site>Reset to default settings</button>
+          <small class="setting-help">Keeps your workout history, exercises, and added dates.</small>
         </div>
       </details>
       <div class="settings-actions"><button type="button" class="primary" data-save-settings>Save</button></div>
@@ -119,6 +120,6 @@
   </section>
 
   <script src="config.js?v=20260918-mobile-add-day"></script>
-  <script src="app.js?v=20261014-missed-workouts"></script>
+  <script src="app.js?v=20261014-reset-settings"></script>
 </body>
 </html>

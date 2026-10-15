@@ -73,3 +73,7 @@ Create a spreadsheet, open Extensions → Apps Script, paste `backend.sample.gs`
 The pre-upgrade spreadsheet copy is a separate file, not a live second backend. If migration fails, do not clear browser data or create replacement tabs; keep the execution error and investigate against the backup. Existing Apps Script deployment versions remain available for rollback. The browser storage format keeps Tal's top-level data compatible with the old website; additional profiles live in separate caches.
 
 Google deployment instructions: https://developers.google.com/apps-script/guides/versions
+
+Delete day controls appear below the exercise rows, one subtle trash icon per displayed date. A named, dated confirmation covers the selected user only and includes archived exercises. Deleting appends existing deletion-marker log events, removes the local blank-date column, and never erases the underlying Sheet records. Today stays available for new entries. The most recent deletion per profile can be undone on this browser even after reload; restoration retains weights, notes and legacy effort/reps fields, and skips entries edited again since deletion. No Apps Script change is required.
+
+With Playwright and Chromium installed, `node tests/day-delete.browser.cjs` checks confirmed day deletion and Undo with simulated Sheets at phone and desktop sizes. It writes screenshots into a temporary directory and never touches live data. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an existing browser executable.

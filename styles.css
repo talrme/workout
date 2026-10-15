@@ -1141,3 +1141,12 @@ body[data-theme="sunrise"] {
 .user-form { padding-top: 10px; }
 .user-settings select, .user-settings input { font-size: 16px; }
 button:disabled, select:disabled { opacity: .5; cursor: default; transform: none; box-shadow: none; }
+
+.day-actions-row th { position: sticky; left: 0; z-index: 1; background: var(--paper); color: var(--muted); font-size: 0.65rem; font-weight: 650; text-align: left; }
+.machine-table .day-actions-row th, .machine-table .day-actions-row td { border-top: 1px solid var(--line); padding-top: 5px; padding-bottom: 5px; }
+.delete-day-button { display: inline-grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 9px; border: 0; background: transparent; color: var(--muted); opacity: .55; box-shadow: none; }
+.delete-day-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.delete-day-button:hover, .delete-day-button:focus-visible { opacity: 1; color: var(--red); background: var(--soft); transform: none; box-shadow: none; }
+.delete-day-button:disabled { opacity: .18; }
+[data-close-day-delete] { flex: 0 0 36px; width: 36px; min-height: 36px; padding: 0; font-size: 1.2rem; }
+[data-close-day-delete]:hover { transform: rotate(90deg); background: var(--ink); color: var(--paper); box-shadow: none; }

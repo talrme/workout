@@ -48,6 +48,7 @@ let profiles = {};
 let pendingWrites = [];
 let requestedUserId = new URL(window.location.href).searchParams.get("user") || "";
 let newUserDraft = null;
+let pendingDayDeletion = null;
 let pendingArchiveId = "";
 let undoArchiveId = "";
 let syncTimer = 0;
@@ -57,6 +58,7 @@ let lastSyncStartedAt = 0;
 
 const els = {
   tableHead: document.querySelector("[data-table-head]"),
+  dayActions: document.querySelector("[data-day-actions]"),
   machineTableEl: document.querySelector(".machine-table"),
   machineTable: document.querySelector("[data-machine-table]"),
   suggestionLegend: document.querySelector("[data-suggestion-legend]"),
@@ -229,6 +231,7 @@ function render() {
   renderMachineTable();
   renderArchivedWorkouts();
   renderUserSettings();
+  renderDayDeleteUndo();
   document.body.classList.toggle("detail-open", Boolean(state.expandedId));
 }
 
@@ -288,6 +291,84 @@ function renderMachineTable() {
   if (!machines.length) rows.push(`<tr><td class="empty-workouts" colspan="${dates.length + 2}">No active workouts. Add a workout below or restore one in Settings.</td></tr>`);
   els.machineTable.innerHTML = rows.join("");
   renderTableActions();
+  renderDayActions(dates);
+}
+
+function dayDeleteLabel(date) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date(year, month - 1, day, 12));
+}
+
+function dayEntries(date) {
+  // Include archived exercises so deleting a day doesn't leave hidden entries.
+  return state.machines.map(machine => ({ machine, log: latestLogFor(machine.id, date) })).filter(entry => entry.log);
+}
+
+function renderDayActions(dates) {
+  els.dayActions.innerHTML = `<tr class="day-actions-row"><th scope="row">Day options</th>${dates.map(date => {
+    const canDelete = userWritable() && (dayEntries(date).length > 0 || state.extraDates.includes(date));
+    return `<td><button type="button" class="delete-day-button" data-delete-day="${escapeHtml(date)}" aria-label="Delete ${escapeHtml(dayDeleteLabel(date))}" title="Delete ${escapeHtml(dayDeleteLabel(date))}" ${canDelete ? "" : "disabled"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7" /></svg></button></td>`;
+  }).join("")}<td aria-hidden="true"></td></tr>`;
+}
+
+function openDayDeletion(date) {
+  if (!userWritable() || (!dayEntries(date).length && !state.extraDates.includes(date))) return;
+  pendingDayDeletion = { date, userId: state.activeUserId };
+  const count = dayEntries(date).length;
+  document.querySelector("[data-delete-day-title]").textContent = `Delete ${dayDeleteLabel(date)}?`;
+  document.querySelector("[data-delete-day-description]").textContent = count
+    ? `Remove all ${count} workout ${count === 1 ? "entry" : "entries"} for ${currentUser().name} on this date, including any archived workouts? Other days and users are kept. You can undo this afterward.`
+    : `Remove this empty date column for ${currentUser().name}? You can undo this afterward.`;
+  document.querySelector("[data-delete-day-dialog]").showModal();
+  document.body.classList.add("is-modal-open");
+  document.querySelector("[data-cancel-day-delete]").focus({ preventScroll: true });
+}
+
+function confirmDayDeletion() {
+  const pending = pendingDayDeletion;
+  if (!pending) return;
+  const dialog = document.querySelector("[data-delete-day-dialog]");
+  if (pending.userId !== state.activeUserId || !userWritable()) { dialog.close(); return; }
+  const entries = dayEntries(pending.date);
+  const wasExtraDate = state.extraDates.includes(pending.date);
+  const undo = { date: pending.date, userId: state.activeUserId, wasExtraDate, entries: [] };
+  entries.forEach(({ machine, log }) => {
+    const deletion = appendLogForDate(machine, pending.date, { weight: "", note: DELETE_MARKER, deleted: true }, { renderAfter: false });
+    undo.entries.push({ machineId: machine.id, log: { ...log }, deletionId: deletion.id });
+  });
+  state.extraDates = state.extraDates.filter(date => date !== pending.date);
+  cacheProfile();
+  profiles[state.activeUserId].dayDeleteUndo = undo;
+  state.expandedId = "";
+  saveState();
+  dialog.close();
+  render();
+  document.querySelector("[data-undo-day-delete]").focus({ preventScroll: true });
+}
+
+function renderDayDeleteUndo() {
+  const undo = profiles[state.activeUserId]?.dayDeleteUndo;
+  const notice = document.querySelector("[data-day-delete-notice]");
+  notice.hidden = !undo;
+  if (undo) document.querySelector("[data-day-delete-message]").textContent = `${formatLongDate(undo.date)} deleted for ${currentUser().name}.`;
+}
+
+function undoDayDeletion() {
+  const undo = profiles[state.activeUserId]?.dayDeleteUndo;
+  if (!undo || undo.userId !== state.activeUserId || !userWritable()) return;
+  undo.entries.forEach(entry => {
+    const machine = state.machines.find(item => item.id === entry.machineId);
+    // Don't overwrite a newer edit made after deletion (including on another device).
+    if (machine && latestEventFor(machine.id, undo.date)?.id === entry.deletionId) {
+      appendLogForDate(machine, undo.date, entry.log, { renderAfter: false });
+    }
+  });
+  if (undo.wasExtraDate && !state.extraDates.includes(undo.date)) state.extraDates.push(undo.date);
+  delete profiles[state.activeUserId].dayDeleteUndo;
+  historyColumns = Math.max(historyColumns, historyDates().indexOf(undo.date) + 2);
+  saveState();
+  render();
+  document.querySelector(`[data-delete-day="${CSS.escape(undo.date)}"]`)?.focus({ preventScroll: true });
 }
 
 function updateTableWidth(dateCount = displayDates().length) {
@@ -734,18 +815,20 @@ function appendTodayLog(machine, values, options = {}) {
 
 function appendLogForDate(machine, date, values, options = {}) {
   if (!userWritable()) return;
+  const previousEvent = latestEventFor(machine.id, date);
+  const createdAt = new Date(Math.max(Date.now(), (Date.parse(previousEvent?.createdAt) || 0) + 1)).toISOString();
   const log = {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
     date,
-    createdAt: new Date().toISOString(),
+    createdAt,
     userId: state.activeUserId,
     profileName: currentUser().name,
     machineId: machine.id,
     machineName: machine.name,
-    weight: values.weight || "",
-    reps: "",
-    effort: "",
-    rir: "",
+    weight: values.weight ?? "",
+    reps: values.reps ?? "",
+    effort: values.effort ?? "",
+    rir: values.rir ?? "",
     note: values.deleted ? DELETE_MARKER : values.note || "",
     deleted: Boolean(values.deleted)
   };
@@ -753,6 +836,7 @@ function appendLogForDate(machine, date, values, options = {}) {
   saveState();
   if (options.renderAfter !== false) render();
   syncLog(log);
+  return log;
 }
 
 function addDay() {
@@ -1149,6 +1233,19 @@ function bindEvents() {
       applyAppearance();
       document.querySelectorAll("button[data-theme]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
     }
+  });
+  const dayDialog = document.querySelector("[data-delete-day-dialog]");
+  document.querySelectorAll("[data-cancel-day-delete], [data-close-day-delete]").forEach(button => button.addEventListener("click", () => dayDialog.close()));
+  document.querySelector("[data-confirm-day-delete]").addEventListener("click", confirmDayDeletion);
+  document.querySelector("[data-undo-day-delete]").addEventListener("click", undoDayDeletion);
+  dayDialog.addEventListener("click", event => { if (event.target === dayDialog) dayDialog.close(); });
+  dayDialog.addEventListener("close", () => {
+    pendingDayDeletion = null;
+    if (els.settingsModal.hidden && els.workoutModal.hidden) document.body.classList.remove("is-modal-open");
+  });
+  els.dayActions.addEventListener("click", event => {
+    const button = event.target.closest("[data-delete-day]");
+    if (button && !button.disabled) { event.stopPropagation(); openDayDeletion(button.dataset.deleteDay); }
   });
   const archiveDialog = document.querySelector("[data-archive-dialog]");
   document.querySelectorAll("[data-cancel-archive], [data-close-archive]").forEach(button => button.addEventListener("click", () => archiveDialog.close()));

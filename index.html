@@ -9,7 +9,7 @@
   <link rel="icon" href="dumbell-2.png?v=20261014" type="image/png">
   <link rel="apple-touch-icon" href="dumbell-2.png?v=20261014">
   <link rel="manifest" href="manifest.webmanifest?v=20261014-dumbbell-2">
-  <link rel="stylesheet" href="styles.css?v=20261014-users-v2">
+  <link rel="stylesheet" href="styles.css?v=20261015-delete-day">
 </head>
 <body>
   <main class="app-shell">
@@ -24,9 +24,11 @@
         <table class="machine-table">
           <thead data-table-head></thead>
           <tbody data-machine-table></tbody>
+          <tfoot data-day-actions></tfoot>
         </table>
       </div>
       <div class="table-actions" data-table-actions></div>
+      <div class="archive-notice" data-day-delete-notice role="status" hidden><span data-day-delete-message></span><button type="button" data-undo-day-delete>Undo delete</button></div>
       <div class="archive-notice" data-archive-notice role="status" hidden><span data-archive-message></span><button type="button" data-undo-archive>Undo</button></div>
       <div class="workout-legend" data-suggestion-legend hidden>
         <span class="suggestion-swatch" aria-hidden="true"></span>
@@ -147,7 +149,13 @@
     <div class="archive-dialog-actions"><button type="button" data-cancel-archive autofocus>Keep workout</button><button type="button" class="danger" data-confirm-archive>Archive workout</button></div>
   </dialog>
 
+  <dialog class="archive-dialog" data-delete-day-dialog aria-labelledby="delete-day-title" aria-describedby="delete-day-description">
+    <div class="archive-dialog-header"><h2 id="delete-day-title" data-delete-day-title>Delete day?</h2><button type="button" data-close-day-delete aria-label="Close delete day confirmation">×</button></div>
+    <p id="delete-day-description" data-delete-day-description></p>
+    <div class="archive-dialog-actions"><button type="button" data-cancel-day-delete autofocus>Keep day</button><button type="button" class="danger" data-confirm-day-delete>Delete day</button></div>
+  </dialog>
+
   <script src="config.js?v=20260918-mobile-add-day"></script>
-  <script src="app.js?v=20261014-users-v2"></script>
+  <script src="app.js?v=20261015-delete-day"></script>
 </body>
 </html>

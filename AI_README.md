@@ -25,3 +25,5 @@ Shared profiles are not authenticated private accounts. User actions live in Adv
 ## Validation
 
 node tests/backend-users.test.cjs runs without external dependencies and mocks Apps Script services. It checks backup-before-write, original-cell preservation, ownership, migration retries, user creation/copy, duplicate request IDs, archive/restore, and last-user protection. The task's browser QA also exercises phone/desktop flows, delayed replies, offline retries, fresh-device profile links and archive restoration, and the old backend. Do not test by writing to the real Sheet.
+
+Delete day controls appear below the exercise rows, one subtle trash icon per displayed date. A named, dated confirmation covers the selected user only and includes archived exercises. Deleting appends existing deletion-marker log events, removes the local blank-date column, and never erases the underlying Sheet records. Today stays available for new entries. The most recent deletion per profile can be undone on this browser even after reload; restoration retains weights, notes and legacy effort/reps fields, and skips entries edited again since deletion. No Apps Script change is required.

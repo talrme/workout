@@ -36,9 +36,18 @@ const state = {
   expandedDate: "",
   extraDates: [],
   archivedMachineIds: [],
-  settings: { ...DEFAULT_SETTINGS }
+  settings: { ...DEFAULT_SETTINGS },
+  activeUserId: "tal",
+  users: [{ id: "tal", name: "Tal", archived: false }]
 };
 
+let backendReady = false;
+let profileBusy = false;
+let flushingWrites = false;
+let profiles = {};
+let pendingWrites = [];
+let requestedUserId = new URL(window.location.href).searchParams.get("user") || "";
+let newUserDraft = null;
 let pendingArchiveId = "";
 let undoArchiveId = "";
 let syncTimer = 0;
@@ -53,7 +62,6 @@ const els = {
   suggestionLegend: document.querySelector("[data-suggestion-legend]"),
   syncNote: document.querySelector("[data-sync-note]"),
   sheetLink: document.querySelector("[data-sheet-link]"),
-  profileName: document.querySelector("[data-profile-name]"),
   autoSync: document.querySelector("[data-auto-sync]"),
   reduceMotion: document.querySelector("[data-reduce-motion]"),
   showNotes: document.querySelector("[data-show-notes]"),
@@ -69,26 +77,149 @@ const els = {
   workoutSetup: document.querySelector("[data-workout-setup]")
 };
 
+function emptyProfile(userId) {
+  return { machines: userId === "tal" ? DEFAULT_MACHINES.map(machine => ({ ...machine })) : [], logs: [], extraDates: [], archivedMachineIds: [], migrationPrepared: false };
+}
+
+function cacheProfile() {
+  profiles[state.activeUserId] = { ...profiles[state.activeUserId], machines: state.machines, logs: state.logs,
+    extraDates: state.extraDates, archivedMachineIds: state.archivedMachineIds };
+}
+
+function activateProfile(userId) {
+  cacheProfile();
+  const data = profiles[userId] || emptyProfile(userId);
+  profiles[userId] = data;
+  state.activeUserId = userId;
+  state.machines = data.machines;
+  state.logs = data.logs;
+  state.extraDates = data.extraDates;
+  state.archivedMachineIds = data.archivedMachineIds;
+  state.expandedId = "";
+  state.expandedDate = "";
+  historyColumns = HISTORY_COLUMNS;
+  undoArchiveId = "";
+  document.querySelector("[data-archive-notice]").hidden = true;
+  const url = new URL(window.location.href);
+  url.searchParams.set("user", userId);
+  window.history.replaceState(null, "", url);
+  saveState();
+  render();
+}
+
 function loadState() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY) || "{}");
-    if (Array.isArray(saved.machines) && saved.machines.length) state.machines = mergeMachines(saved.machines);
-    if (Array.isArray(saved.logs)) state.logs = saved.logs;
-    if (Array.isArray(saved.archivedMachineIds)) state.archivedMachineIds = [...new Set(saved.archivedMachineIds.filter(id => typeof id === "string"))];
-    if (Array.isArray(saved.extraDates)) state.extraDates = saved.extraDates.filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date));
-    Object.assign(state.settings, saved.settings || {});
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
-  }
-  if (window.WORKOUT_CONFIG?.defaultBackendUrl) {
-    state.settings.backendUrl = window.WORKOUT_CONFIG.defaultBackendUrl;
-  }
-  state.settings.autoSync = state.settings.autoSync ?? window.WORKOUT_CONFIG?.autoSync ?? true;
-  state.logs = state.logs.filter((log) => !isLegacySampleLog(log));
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY) || "{}"); }
+  catch { /* Keep the old stored value intact if it cannot be parsed. */ }
+  Object.assign(state.settings, saved.settings || {});
+  if (window.WORKOUT_CONFIG?.defaultBackendUrl) state.settings.backendUrl = window.WORKOUT_CONFIG.defaultBackendUrl;
+  if (saved.profiles && typeof saved.profiles === "object") profiles = saved.profiles;
+  if (!profiles.tal) profiles.tal = {
+    ...emptyProfile("tal"),
+    machines: Array.isArray(saved.machines) && saved.machines.length ? saved.machines : emptyProfile("tal").machines,
+    logs: Array.isArray(saved.logs) ? saved.logs : [],
+    extraDates: Array.isArray(saved.extraDates) ? saved.extraDates : [],
+    archivedMachineIds: Array.isArray(saved.archivedMachineIds) ? saved.archivedMachineIds : []
+  };
+  if (Array.isArray(saved.users) && saved.users.length) state.users = saved.users;
+  pendingWrites = Array.isArray(saved.pendingWrites) ? saved.pendingWrites : [];
+  newUserDraft = saved.newUserDraft || null;
+  const userId = saved.activeUserId && profiles[saved.activeUserId] ? saved.activeUserId : "tal";
+  const data = { ...emptyProfile(userId), ...profiles[userId] };
+  state.activeUserId = userId;
+  state.machines = data.machines;
+  state.logs = data.logs.filter(log => !isLegacySampleLog(log));
+  state.extraDates = data.extraDates;
+  state.archivedMachineIds = data.archivedMachineIds;
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  cacheProfile();
+  // Legacy top-level data always represents Tal, including after a rollback.
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, ...profiles.tal, profiles, pendingWrites, newUserDraft }));
+}
+
+function boolValue(value) { return value === true || String(value).toLowerCase() === "true"; }
+function currentUser() { return state.users.find(user => user.id === state.activeUserId) || { id: state.activeUserId, name: "Tal" }; }
+function userWritable() { return !backendReady || !boolValue(currentUser().archived); }
+
+function renderUserSettings() {
+  const select = document.querySelector("[data-user-select]");
+  const active = state.users.filter(user => !boolValue(user.archived));
+  select.innerHTML = active.map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`).join("");
+  select.value = state.activeUserId;
+  select.disabled = !backendReady || profileBusy;
+  document.querySelector("[data-users-controls]").hidden = !backendReady;
+  document.querySelector("[data-user-status]").textContent = backendReady ? "Shared profiles: anyone with the link can switch users." : "User features will unlock after the Apps Script update.";
+  document.querySelector("[data-create-user]").disabled = profileBusy;
+  document.querySelector("[data-archive-user]").disabled = profileBusy || active.length < 2;
+  const archived = state.users.filter(user => boolValue(user.archived));
+  document.querySelector("[data-archived-users]").innerHTML = archived.length ? archived.map(user => `<div class="archived-workout"><span>${escapeHtml(user.name)}</span><button type="button" data-restore-user="${escapeHtml(user.id)}" ${profileBusy ? "disabled" : ""}>Restore</button></div>`).join("") : '<p class="setting-help">No archived users.</p>';
+  document.querySelector("[data-check-users]").disabled = profileBusy;
+}
+
+async function switchUser(userId) {
+  if (!backendReady || profileBusy) return;
+  closeExpandedDetail();
+  profileBusy = true;
+  renderUserSettings();
+  try {
+    const response = await backendRequest("snapshot", {}, userId);
+    if (!response?.ok || Number(response.schemaVersion) < 2) throw new Error(response?.error || "Backend update needed");
+    if (boolValue((response.users || []).find(user => user.id === userId)?.archived)) throw new Error("This user is archived");
+    applySnapshot(response, { renderAfter: false });
+    activateProfile(userId);
+  } catch (error) { setSyncNote(error.message); }
+  finally { profileBusy = false; renderUserSettings(); }
+}
+
+async function createUser() {
+  if (!backendReady || profileBusy) return;
+  const name = document.querySelector("[data-new-user-name]").value.trim();
+  if (!name) { document.querySelector("[data-new-user-name]").focus(); return; }
+  const copyTal = document.querySelector("[data-new-user-start]").value === "copy";
+  if (!newUserDraft || newUserDraft.name !== name || newUserDraft.copyTal !== copyTal) newUserDraft = { id: `user-${crypto.randomUUID()}`, name, copyTal };
+  profileBusy = true;
+  saveState();
+  renderUserSettings();
+  try {
+    if (!await flushWrites()) throw new Error("Wait for pending workout changes to sync, then try again.");
+    const response = await backendRequest("createUser", newUserDraft);
+    if (!response?.ok) throw new Error(response?.error || "User could not be created");
+    applySnapshot(response, { renderAfter: false });
+    activateProfile(response.userId);
+    newUserDraft = null;
+    saveState();
+    document.querySelector("[data-new-user-name]").value = "";
+    document.querySelector("[data-add-user-details]").open = false;
+    setSyncNote("User added");
+  } catch (error) { setSyncNote(error.message); }
+  finally { profileBusy = false; renderUserSettings(); }
+}
+
+async function setUserArchived(userId, archived) {
+  if (!backendReady || profileBusy) return;
+  const user = state.users.find(item => item.id === userId);
+  if (!user) return;
+  if (archived && !window.confirm(`Archive ${user.name}? Their exercises and history will be kept and can be restored here.`)) return;
+  closeExpandedDetail();
+  profileBusy = true;
+  renderUserSettings();
+  try {
+    if (!await flushWrites()) throw new Error("Wait for pending workout changes to sync, then try again.");
+    const response = await backendRequest("setUserArchived", { id: userId, archived });
+    if (!response?.ok) throw new Error(response?.error || "User could not be updated");
+    applySnapshot(response, { renderAfter: false });
+    if (archived && userId === state.activeUserId) {
+      const next = state.users.find(item => !boolValue(item.archived));
+      const snapshot = await backendRequest("snapshot", {}, next.id);
+      if (!snapshot?.ok) throw new Error("User archived. Select another user to continue.");
+      applySnapshot(snapshot, { renderAfter: false });
+      activateProfile(next.id);
+    } else render();
+    setSyncNote(archived ? "User archived; data kept" : "User restored");
+  } catch (error) { setSyncNote(error.message); }
+  finally { profileBusy = false; renderUserSettings(); }
 }
 
 function render() {
@@ -97,6 +228,7 @@ function render() {
   if (els.settingsModal.hidden) renderSettings();
   renderMachineTable();
   renderArchivedWorkouts();
+  renderUserSettings();
   document.body.classList.toggle("detail-open", Boolean(state.expandedId));
 }
 
@@ -108,7 +240,6 @@ function applyAppearance() {
 }
 
 function renderSettings() {
-  els.profileName.value = state.settings.profileName || "";
   els.autoSync.checked = Boolean(state.settings.autoSync);
   els.reduceMotion.checked = Boolean(state.settings.reduceMotion);
   els.showNotes.checked = !state.settings.hideTodayNotes;
@@ -240,6 +371,7 @@ function confirmArchiveWorkout() {
   if (state.expandedId === machine.id) state.expandedId = "";
   undoArchiveId = machine.id;
   saveState();
+  if (backendReady) queueWrite("setMachineArchived", { id: machine.id, archived: true });
   document.querySelector("[data-archive-dialog]").close();
   render();
   const notice = document.querySelector("[data-archive-notice]");
@@ -249,6 +381,7 @@ function confirmArchiveWorkout() {
 }
 
 function restoreWorkout(machineId) {
+  if (backendReady) queueWrite("setMachineArchived", { id: machineId, archived: false });
   state.archivedMachineIds = state.archivedMachineIds.filter(id => id !== machineId);
   if (undoArchiveId === machineId) {
     undoArchiveId = "";
@@ -491,6 +624,7 @@ function toggleMachine(machineId) {
 }
 
 function quickRepeat(machineId) {
+  if (!userWritable()) return;
   const machine = state.machines.find((item) => item.id === machineId);
   if (!machine) return;
   const weight = previousWeight(machineId, isoDate(new Date())) || defaultValue(machine);
@@ -502,6 +636,7 @@ function quickRepeat(machineId) {
 }
 
 function saveDetail(machineId, options = {}) {
+  if (!userWritable()) return;
   const machine = state.machines.find((item) => item.id === machineId);
   const panel = document.querySelector(`[data-detail-panel="${CSS.escape(machineId)}"]`);
   if (!machine || !panel) return;
@@ -561,7 +696,8 @@ function saveWorkoutModal() {
   }
   const defaultValueText = els.workoutDefault.value.trim();
   const machine = {
-    id: uniqueMachineId(name),
+    id: state.activeUserId === "tal" ? uniqueMachineId(name) : `${state.activeUserId}-${crypto.randomUUID()}`,
+    userId: state.activeUserId,
     name,
     group: els.workoutGroup.value || "Other",
     valueLabel: "Weight",
@@ -597,11 +733,13 @@ function appendTodayLog(machine, values, options = {}) {
 }
 
 function appendLogForDate(machine, date, values, options = {}) {
+  if (!userWritable()) return;
   const log = {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
     date,
     createdAt: new Date().toISOString(),
-    profileName: state.settings.profileName || "",
+    userId: state.activeUserId,
+    profileName: currentUser().name,
     machineId: machine.id,
     machineName: machine.name,
     weight: values.weight || "",
@@ -655,10 +793,15 @@ async function syncNow(options = {}) {
   lastSyncStartedAt = Date.now();
   if (!options.quiet) setSyncNote("Syncing...");
   try {
-    const response = await backendRequest("snapshot");
+    let response = await backendRequest("snapshot", {}, requestedUserId || state.activeUserId);
+    if (!response?.ok && requestedUserId) {
+      requestedUserId = "";
+      response = await backendRequest("snapshot", {}, state.activeUserId);
+    }
     if (response && response.ok) {
       applySnapshot(response, { renderAfter: true });
       if (!options.quiet) setSyncNote("Synced");
+      flushWrites();
     } else if (!options.quiet) {
       setSyncNote("Sync issue");
     }
@@ -670,46 +813,102 @@ async function syncNow(options = {}) {
   }
 }
 
-function syncMachine(machine) {
-  if (!state.settings.backendUrl) return;
-  backendRequest("saveMachine", { machine }).then((response) => {
-    if (response?.ok) applySnapshot(response, { renderAfter: true });
-    setSyncNote(response?.ok ? "Synced" : "Sync issue");
-    if (response?.ok) startAutoSync();
-  }).catch((error) => {
-    console.warn(error);
-    setSyncNote("Saved locally");
-  });
+function queueWrite(action, payload, userId = state.activeUserId) {
+  pendingWrites.push({ id: crypto.randomUUID(), action, payload, userId });
+  saveState();
+  startAutoSync();
+  flushWrites();
 }
 
-function syncLog(log) {
-  if (!state.settings.backendUrl) return;
-  backendRequest("logSet", { log }).then((response) => {
-    if (response?.ok) applySnapshot(response, { renderAfter: true });
-    setSyncNote(response?.ok ? "Synced" : "Sync issue");
-    if (response?.ok) startAutoSync();
-  }).catch((error) => {
-    console.warn(error);
-    setSyncNote("Saved locally");
-  });
+async function flushWrites() {
+  if (flushingWrites) return pendingWrites.length === 0;
+  if (!state.settings.backendUrl) return pendingWrites.length === 0;
+  flushingWrites = true;
+  try {
+    while (pendingWrites.length) {
+      const write = pendingWrites.find(item => (backendReady || item.userId === "tal") &&
+        (!backendReady || !boolValue(state.users.find(user => user.id === item.userId)?.archived)));
+      if (!write) return false;
+      const response = await backendRequest(write.action, write.payload, write.userId);
+      if (!response?.ok) throw new Error(response?.error || "Sync issue");
+      pendingWrites = pendingWrites.filter(item => item.id !== write.id);
+      applySnapshot(response, { renderAfter: true });
+      setSyncNote("Synced");
+    }
+    return true;
+  } catch (error) { setSyncNote(`Saved on this device; sync pending. ${error.message}`); return false; }
+  finally { flushingWrites = false; saveState(); }
 }
+
+function syncMachine(machine) { queueWrite("saveMachine", { machine: { ...machine, userId: state.activeUserId } }); }
+function syncLog(log) { queueWrite("logSet", { log }, log.userId || state.activeUserId); }
 
 function applySnapshot(response, options = {}) {
-  if (Array.isArray(response.machines) && response.machines.length) {
-    state.machines = mergeMachines(response.machines);
+  cacheProfile();
+  if (Number(response.schemaVersion) >= 2) {
+    backendReady = true;
+    if (response.backupUrl) {
+      const backupLink = document.querySelector("[data-migration-backup]");
+      backupLink.href = response.backupUrl;
+      backupLink.hidden = false;
+    }
+    if (Array.isArray(response.users)) state.users = response.users;
+    // Queue device-local Tal metadata/archives/unsynced logs once, durably.
+    const tal = profiles.tal;
+    if (tal && !tal.migrationPrepared && response.userId === "tal") {
+      const serverLogIds = new Set((response.logs || []).map(log => log.id));
+      tal.machines.forEach(machine => pendingWrites.push({ id: crypto.randomUUID(), userId: "tal", action: "saveMachine", payload: { machine: { ...machine, userId: "tal" }, metadataOnly: true } }));
+      tal.archivedMachineIds.forEach(id => pendingWrites.push({ id: crypto.randomUUID(), userId: "tal", action: "setMachineArchived", payload: { id, archived: true } }));
+      tal.logs.filter(log => !serverLogIds.has(log.id)).forEach(log => pendingWrites.push({ id: crypto.randomUUID(), userId: "tal", action: "logSet", payload: { log: { ...log, userId: "tal" } } }));
+      tal.migrationPrepared = true;
+    }
   }
-  if (Array.isArray(response.logs)) {
-    state.logs = mergeLogs(response.logs);
+  const userId = Number(response.schemaVersion) >= 2 ? response.userId : "tal";
+  if (!userId) return;
+  const cached = profiles[userId] || emptyProfile(userId);
+  const data = { ...cached };
+  if (Array.isArray(response.machines)) data.machines = mergeMachines(response.machines, cached.machines, userId);
+  if (Array.isArray(response.logs)) data.logs = mergeLogs(response.logs, cached.logs);
+  if (Number(response.schemaVersion) >= 2) {
+    const archived = new Set(data.machines.filter(machine => boolValue(machine.archived)).map(machine => machine.id));
+    pendingWrites.filter(write => write.userId === userId && write.action === "setMachineArchived").forEach(write => write.payload.archived ? archived.add(write.payload.id) : archived.delete(write.payload.id));
+    data.archivedMachineIds = [...archived];
+    pendingWrites.filter(write => write.userId === userId && write.action === "saveMachine" && !write.payload.metadataOnly).forEach(write => {
+      const index = data.machines.findIndex(machine => machine.id === write.payload.machine.id);
+      if (index >= 0) data.machines[index] = { ...data.machines[index], ...write.payload.machine };
+      else data.machines.push(write.payload.machine);
+    });
+  }
+  profiles[userId] = data;
+  if (!backendReady && state.activeUserId !== "tal") {
+    activateProfile("tal");
+  } else if (state.activeUserId === userId) {
+    state.machines = data.machines;
+    state.logs = data.logs;
+    state.extraDates = data.extraDates;
+    state.archivedMachineIds = data.archivedMachineIds;
+  }
+  if (requestedUserId && requestedUserId === userId && backendReady) {
+    requestedUserId = "";
+    if (!boolValue(state.users.find(user => user.id === userId)?.archived)) activateProfile(userId);
   }
   saveState();
   if (options.renderAfter !== false) renderAfterSnapshot();
+  else renderUserSettings();
+  // A response for a different user is cached, never rendered into this profile.
+  if (backendReady && !profileBusy && boolValue(currentUser().archived)) {
+    const next = state.users.find(user => !boolValue(user.archived));
+    if (next) switchUser(next.id);
+  }
+  if (!flushingWrites && backendReady && pendingWrites.length) flushWrites();
 }
 
-function backendRequest(action, payload = {}) {
+function backendRequest(action, payload = {}, userId = state.activeUserId) {
   return new Promise((resolve, reject) => {
     const callbackName = `workoutCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const url = new URL(state.settings.backendUrl);
     url.searchParams.set("action", action);
+    url.searchParams.set("userId", userId);
     url.searchParams.set("callback", callbackName);
     if (Object.keys(payload).length) url.searchParams.set("payload", JSON.stringify(payload));
 
@@ -740,39 +939,28 @@ function backendRequest(action, payload = {}) {
   });
 }
 
-function mergeMachines(incoming) {
-  const byId = new Map(DEFAULT_MACHINES.map((machine) => [machine.id, { ...machine }]));
-  state.machines.forEach((machine) => byId.set(machine.id, { ...(byId.get(machine.id) || {}), ...machine }));
+function mergeMachines(incoming, existing = state.machines, userId = state.activeUserId) {
+  const seeds = userId === "tal" && !backendReady ? DEFAULT_MACHINES : [];
+  const byId = new Map(seeds.map((machine) => [machine.id, { ...machine }]));
+  existing.forEach((machine) => byId.set(machine.id, { ...(byId.get(machine.id) || {}), ...machine }));
   incoming.forEach((machine) => {
     if (!machine.id) return;
     const fallback = byId.get(machine.id) || {};
-    const defaultMachine = DEFAULT_MACHINES.some((item) => item.id === machine.id);
     byId.set(machine.id, {
       ...fallback,
       ...machine,
-      group: fallback.group || machine.group || (defaultMachine ? "Upper body" : "Other"),
-      seedWeight: fallback.seedWeight || machine.targetWeight || machine.seedWeight || ""
+      group: machine.group || fallback.group || (DEFAULT_MACHINES.find(item => item.id === machine.id)?.group) || "Other",
+      valueLabel: machine.valueLabel || fallback.valueLabel || (machine.id === "plank" ? "Time" : "Weight"),
+      seedWeight: machine.seedWeight || fallback.seedWeight || machine.targetWeight || ""
     });
   });
-  const defaultIds = new Set(DEFAULT_MACHINES.map((machine) => machine.id));
-  const defaults = DEFAULT_MACHINES.map((machine) => ({ ...machine, ...(byId.get(machine.id) || {}) }));
-  const custom = Array.from(byId.values())
-    .filter((machine) => machine.id && !defaultIds.has(machine.id))
-    .map((machine) => ({
-      ...machine,
-      group: machine.group || "Other",
-      valueLabel: machine.valueLabel || "Weight",
-      seedWeight: machine.seedWeight || machine.targetWeight || ""
-    }));
-  return [...defaults, ...custom];
+  return [...byId.values()];
 }
 
-function mergeLogs(incoming) {
-  const byId = new Map(state.logs.filter((log) => !isLegacySampleLog(log)).map((log) => [log.id, log]));
-  incoming.forEach((log) => {
-    if (log.id) byId.set(log.id, { ...log, date: normalizeDate(log.date) });
-  });
-  return Array.from(byId.values());
+function mergeLogs(incoming, existing = state.logs) {
+  const byId = new Map(existing.filter(log => !isLegacySampleLog(log)).map(log => [log.id, log]));
+  incoming.forEach(log => { if (log.id) byId.set(log.id, { ...log, date: normalizeDate(log.date) }); });
+  return [...byId.values()];
 }
 
 function isDeleteMarker(log) {
@@ -785,6 +973,7 @@ function isLegacySampleLog(log) {
 
 function setSyncNote(message) {
   els.syncNote.textContent = message;
+  document.querySelector("[data-user-sync-note]").textContent = message;
 }
 
 function setIdleSyncNote() {
@@ -853,6 +1042,10 @@ function renderAfterSnapshot() {
 
 function openSettings() {
   renderSettings();
+  if (newUserDraft && !document.querySelector("[data-new-user-name]").value) {
+    document.querySelector("[data-new-user-name]").value = newUserDraft.name;
+    document.querySelector("[data-new-user-start]").value = newUserDraft.copyTal ? "copy" : "empty";
+  }
   els.settingsBackdrop.hidden = false;
   els.settingsModal.hidden = false;
   document.body.classList.add("is-modal-open");
@@ -867,7 +1060,6 @@ function closeSettings() {
 }
 
 function saveSettings() {
-  state.settings.profileName = els.profileName.value.trim() || "Tal";
   state.settings.autoSync = els.autoSync.checked;
   state.settings.reduceMotion = els.reduceMotion.checked;
   state.settings.hideTodayNotes = !els.showNotes.checked;
@@ -936,7 +1128,13 @@ function bindEvents() {
   document.querySelector("[data-cancel-workout]").addEventListener("click", closeWorkoutModal);
   document.querySelector("[data-save-workout]").addEventListener("click", saveWorkoutModal);
   els.workoutBackdrop.addEventListener("click", closeWorkoutModal);
+  document.querySelector("[data-user-select]").addEventListener("change", event => switchUser(event.target.value));
+  document.querySelector("[data-create-user]").addEventListener("click", createUser);
+  document.querySelector("[data-check-users]").addEventListener("click", () => syncNow());
+  document.querySelector("[data-archive-user]").addEventListener("click", () => setUserArchived(state.activeUserId, true));
   els.settingsModal.addEventListener("click", event => {
+    const restoreUser = event.target.closest("[data-restore-user]");
+    if (restoreUser) setUserArchived(restoreUser.dataset.restoreUser, false);
     const restore = event.target.closest("[data-restore-workout]");
     if (restore) {
       restoreWorkout(restore.dataset.restoreWorkout);

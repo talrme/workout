@@ -9,7 +9,7 @@
   <link rel="icon" href="dumbell-2.png?v=20261014" type="image/png">
   <link rel="apple-touch-icon" href="dumbell-2.png?v=20261014">
   <link rel="manifest" href="manifest.webmanifest?v=20261014-dumbbell-2">
-  <link rel="stylesheet" href="styles.css?v=20261014-archive-header">
+  <link rel="stylesheet" href="styles.css?v=20261014-users-v2">
 </head>
 <body>
   <main class="app-shell">
@@ -67,14 +67,29 @@
       <details class="advanced-settings">
         <summary>Advanced settings</summary>
         <div class="advanced-panel">
-          <label><span>Name</span><input data-profile-name type="text" autocomplete="name" placeholder="Tal"></label>
+          <section class="user-settings" aria-label="Users">
+            <label><span>Current user</span><select data-user-select disabled><option value="tal">Tal</option></select></label>
+            <p class="setting-help" data-user-status></p>
+            <button type="button" data-check-users>Check connection</button>
+            <span class="setting-help" data-user-sync-note role="status"></span>
+            <div data-users-controls hidden>
+              <details data-add-user-details><summary>Add user</summary>
+                <div class="user-form"><label><span>Name</span><input type="text" data-new-user-name maxlength="80" autocomplete="off"></label>
+                  <label><span>Start with</span><select data-new-user-start><option value="empty">An empty workout list</option><option value="copy">Copy Tal’s exercises (no history)</option></select></label>
+                  <button type="button" data-create-user>Add user</button></div>
+              </details>
+              <button type="button" class="danger" data-archive-user>Archive current user</button>
+              <details><summary>Archived users</summary><div data-archived-users></div></details>
+            </div>
+          </section>
           <label class="toggle-row"><span>Auto sync</span><input type="checkbox" data-auto-sync></label>
           <label class="toggle-row"><span>Reduce motion</span><input type="checkbox" data-reduce-motion></label>
           <a data-sheet-link href="https://docs.google.com/spreadsheets/d/1iOg845q_IxXqVDmVxSjuRTdEVA19JaLvECDnTK-BL3Y/edit" target="_blank" rel="noreferrer">Google Sheet ↗</a>
+          <a data-migration-backup hidden target="_blank" rel="noreferrer">Pre-upgrade spreadsheet backup ↗</a>
           <span class="sync-pill" data-sync-note>Loading sheet...</span>
           <details class="archived-settings" data-archived-settings>
             <summary>Archived workouts (<span data-archive-count>0</span>)</summary>
-            <p class="setting-help">Archived rows are hidden on this browser. Restore them here with all their history.</p>
+            <p class="setting-help">Restore archived rows here with all their history. After the backend upgrade, archiving syncs across devices.</p>
             <div class="archived-list" data-archived-list></div>
           </details>
           <button type="button" class="danger" data-reset-site>Reset to default settings</button>
@@ -133,6 +148,6 @@
   </dialog>
 
   <script src="config.js?v=20260918-mobile-add-day"></script>
-  <script src="app.js?v=20261014-archive-header"></script>
+  <script src="app.js?v=20261014-users-v2"></script>
 </body>
 </html>

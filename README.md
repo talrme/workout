@@ -1,167 +1,75 @@
-# workout
+# Workout
 
-**Live site:** [https://talrme.github.io/workout/](https://talrme.github.io/workout/)
+**Live site:** https://talrme.github.io/workout/
 
-A tiny static app that uses a Google Sheet as a very simple backend.
+A phone-friendly workout tracker backed by Google Sheets and Apps Script.
 
-It works in two modes:
+## Upgrade to users
 
-- Local mode: saves machine setup notes and logs in this browser.
-- Google Sheet mode: uses a deployed Google Apps Script URL to read/write a Sheet.
+1. Open the existing workout spreadsheet and choose **Extensions → Apps Script**.
+2. Replace the contents of `Code.gs` with the complete `backend.sample.gs` file and save.
+3. Select **setupWorkoutUsers** in the function dropdown and click **Run**. Authorize if prompted. Wait for **Execution completed**.
+4. Choose **Deploy → Manage deployments**, select the existing Web app deployment, and click the pencil icon. Under Version choose **New version**, then **Deploy**. Keep the current access and execution settings.
+5. Refresh Workout. If automatic sync is off, open **Settings → Advanced settings → Check connection**.
 
-This copy has a default Apps Script backend saved in `config.js`, so a fresh browser should already know which Sheet backend to use. The app UI intentionally hides the backend setup details and links directly to the source Google Sheet in the footer.
+Do not create a new deployment or change `config.js`; updating the existing deployment keeps its URL.
 
-## What The App Shows
+The setup function copies the complete spreadsheet BEFORE adding any tabs or columns. If the copy fails, migration stops. Its execution log includes the backup URL; the website also links to it in Advanced settings after the upgrade.
 
-- Exercise rows grouped into legs, upper body, core, physical therapy, and other
-- Today plus four recent dates, newest first; Show older entries at the far right reveals five more dates, and Recent only restores the initial view
-- A subtle empty dashed ring for unlogged workouts; tapping it logs the previous weight
-- Completed workouts show a green check and weight; tap the check to uncheck today, or the number to edit
-- Every past date cell, including an empty dash, opens the same compact inline editor for that exercise and date
-- Inline editors show weight/time and setup notes, with a collapsible More options section for the workout note
-- A prominent Save button with smaller Remove and rotating Close icons
-- Outside taps save and collapse the open editor before handling the tapped control
-- Gentle phone scrolling only when needed to fit the editor in the upper half, accounting for keyboard space and reduced-motion preferences
-- Add workout and Add day buttons below the table stay visible during horizontal scrolling
-- Add day opens a small date picker; Add column creates a blank date column without inventing workout records. Empty added dates are stored on this device; saved entries sync through the existing Sheet backend
-- Centered Workout title with a dumbbell at each edge, no visible machine-column label, and the goal: last 2 reps at effort 7/10, 8/10, and 9/10 across sets 1, 2, and 3
-- Settings at the bottom, opening in a vertically centered dialog with keyboard focus containment and Escape support
-- Garden, Tide, Moon, and Sunrise color schemes, plus separate controls for workout notes and setup previews
-- Advanced settings for profile name, auto sync, reduced motion, Google Sheet link, sync status, and Reset to default settings
-- Highlight missed workouts is enabled by default and can be disabled in Settings. It flags exercises missing from all of the last three distinct workout days with visible logs; fewer than three days do not trigger highlights. Disabling it hides both highlights and their legend.
-- Preferences persist on this device; theme choices preview and save immediately, while the Save button applies the other settings
-- The new dumbbell PNG supplies the favicon and phone icon
-- Existing Google Sheet synchronization on open, return to foreground, and short catch-up windows after saving
+Migration adds a Users tab and appends named columns to Machines and Logs. All existing records with no owner become Tal's. Existing record IDs, dates, weights, setup notes, log notes, and deletion markers are retained. Re-running setup does not duplicate data or backups. It does not permanently delete anything.
 
-## Big Picture
+Existing clients without a user ID continue to read and write Tal only. The website keeps new-user controls disabled until a schema-version-2 snapshot confirms the new backend is running.
 
-The setup is:
+## Users
 
-```text
-workout website -> Apps Script URL -> your Google Sheet
+Advanced settings contains the current-user dropdown, Add user, Archive current user, and Archived users / Restore. New users can start empty (default) or copy Tal's active exercises with setup notes and starting weights but no history. Every copy has independent exercise IDs.
+
+These are shared profiles, not private authenticated accounts. Anyone with the link can switch users. Each device remembers its selection; `?user=USER_ID` opens a profile directly. Appearance/preferences are still device-local. Blank added date columns are cached separately per profile on each device; saved entries sync through the Sheet.
+
+Archiving a user keeps their exercises and history intact. At least one user must remain active. Archiving/restoring exercise rows syncs after the upgrade; the browser's pre-upgrade Tal archive choices are uploaded once on its first successful Tal sync.
+
+The first upgraded Tal sync also imports local-only exercises, missing logs, and section/value-label metadata. Metadata-only imports do not overwrite existing server names, weights, or setup notes. Durable pending writes are scoped to the originating user and retry on subsequent syncs; switching profiles cannot send a save to another user. A pending indicator appears in Advanced settings if a write fails.
+
+## Workout interface
+
+- Centered title between two dumbbells; no visible machine-column label.
+- Today and four recent dates, with Show older entries at the far right.
+- Faint empty rings log the previous weight. Solid checkmarks uncheck today; numbers open the editor.
+- Every past cell, including an empty dash, uses the same compact inline editor.
+- Weight/time and setup notes stay prominent; workout notes live under More options.
+- Save is prominent; small Remove and Close controls share its row. Outside taps save and collapse the editor.
+- Phone scrolling happens gently only when needed, accounting for keyboard space and reduced motion.
+- Add workout and Add day stay below the horizontally scrolling table.
+- A subtle trash icon at each row's far-right end archives it after named confirmation. Undo and Settings → Advanced → Archived workouts restore it with history.
+- Highlight missed workouts flags exercises absent from the last three recorded workout dates; it can be disabled in Settings.
+- Four color schemes, note visibility, and other device preferences persist locally. Reset to default settings preserves profiles, workout data, pending saves, archived rows, and the Sheet connection.
+
+## Backend contract
+
+Users: id, name, archived, createdAt, updatedAt.
+
+Machines: original columns plus userId, group, valueLabel, seedWeight, archived.
+
+Logs: original columns plus userId. Entry removal remains an append-only log with note `__WORKOUT_DELETE__`.
+
+Actions: snapshot, saveMachine, logSet, createUser, setUserArchived, setMachineArchived. JSONP is used for GitHub Pages compatibility. Requests without a userId default to Tal. The script validates exercise ownership and makes log IDs and create-user retries idempotent. Normal exercise saves cannot silently overwrite archive state.
+
+## Verification
+
+Run the standalone migration/ownership tests with:
+
+```sh
+node tests/backend-users.test.cjs
 ```
 
-Deploying means Google turns your Apps Script into a URL that the website can call.
+Phone and desktop browser checks also cover migration from old browser data, empty/copied users, user switching, current and historical edits, cross-device archive restoration, remembered profile links, stale-response isolation, offline retry ownership, and compatibility with the previous backend. Tests use simulated Sheets and do not modify live workout records.
 
-The Sheet itself can stay private. You do not need to make the spreadsheet editable by anyone. The web app runs as you and writes to the Sheet on your behalf.
+## Initial setup (only for a new spreadsheet)
 
-## Step 1: Create The Sheet
+Create a spreadsheet, open Extensions → Apps Script, paste `backend.sample.gs`, run `setupWorkoutUsers`, and deploy as a Web app executing as you with access set to Anyone. Put the resulting `/exec` URL and spreadsheet URL in `config.js`. The spreadsheet itself can stay private; the script runs as its owner.
 
-1. Go to Google Sheets.
-2. Create a blank spreadsheet.
-3. Name it something like `workout backend`.
-4. You do not need to add tabs manually. The script will create `Machines` and `Logs`.
+## Recovery
 
-## Step 2: Open Apps Script
+The pre-upgrade spreadsheet copy is a separate file, not a live second backend. If migration fails, do not clear browser data or create replacement tabs; keep the execution error and investigate against the backup. Existing Apps Script deployment versions remain available for rollback. The browser storage format keeps Tal's top-level data compatible with the old website; additional profiles live in separate caches.
 
-1. In that Sheet, click `Extensions`.
-2. Click `Apps Script`.
-3. A new Apps Script tab opens.
-4. You will probably see a file called `Code.gs` with some starter function.
-
-## Step 3: Paste The Code
-
-1. Open `backend.sample.gs` from this folder.
-2. Select all of the code in that file.
-3. Copy it.
-4. Go back to Apps Script.
-5. Delete everything in `Code.gs`.
-6. Paste the copied code.
-7. Click the save icon, or press `Cmd + S`.
-8. Give the project a name if prompted, like `workout backend script`.
-
-## Step 4: Deploy It
-
-1. In Apps Script, click the blue `Deploy` button in the top right.
-2. Click `New deployment`.
-3. Next to `Select type`, click the gear icon or dropdown.
-4. Choose `Web app`.
-
-Use these web app settings:
-
-- Description: `workout backend v1`
-- Execute as: `Me`
-- Who has access: `Anyone`
-
-Then click `Deploy`.
-
-This means anyone with the website/script URL can submit through the app, but they do not need direct edit access to the Sheet itself.
-
-## Step 5: Authorize It
-
-The first time, Google will ask permission.
-
-1. Click `Authorize access`.
-2. Pick your Google account.
-3. If you see `Google hasn't verified this app`, click `Advanced`.
-4. Click `Go to [project name]`.
-5. Allow the requested permissions.
-
-This is needed because the script writes to the spreadsheet.
-
-## Step 6: Copy The Web App URL
-
-After deployment, Google shows a URL.
-
-Copy the `Web app URL`. It usually ends in `/exec`.
-
-Use the `/exec` URL, not a `/dev` test URL.
-
-## Step 7: Connect The workout Site
-
-This site now keeps backend details out of the page UI. For the live copy, the default Apps Script URL is already stored in `config.js` and is treated as authoritative, so an old browser-local backend URL will not override it.
-
-If you create a new backend later:
-
-1. Open `config.js`.
-2. Replace `defaultBackendUrl` with the new `/exec` Web app URL.
-3. Update `sheetUrl` if the source Google Sheet changed.
-4. Commit and push the site.
-
-The app should then sync with the Google Sheet.
-
-Older browser-local placeholder rows are stripped from local state during load and sync so stale fake history cannot mix into real Sheet data.
-
-## What Happens After That
-
-When you save setup notes or log today's weight, the website calls your Apps Script URL and then does a short catch-up window: it checks the Sheet about every 15 seconds for two minutes, then stops. The site also syncs on page refresh/open and whenever the browser or phone app returns to the foreground.
-
-The script creates/updates:
-
-- `Machines`: machine setup notes, plus older compatibility fields the site can still read
-- `Logs`: dated workout logs. The table uses the latest log row for each machine/date.
-
-Custom workout rows use the existing `Machines` sheet shape, so their name, default value, and setup notes can sync. Their section and value-label preferences are kept in this browser's local state unless the Apps Script backend is expanded later.
-
-Deleting today's entry does not physically remove a row from the Sheet. The site appends a small hidden deletion marker, then treats that machine/date as empty. This works with the original `logSet` backend action, so it does not require a backend redeploy.
-
-The date editor uses the same pattern. Saving a day appends new log rows for changed machine weights/notes. Deleting a day appends deletion markers for each machine on that date.
-
-## If You Later Change The Script
-
-If `backend.sample.gs` changes later, redeploy the script:
-
-1. Paste/save the new script code.
-2. Click `Deploy`.
-3. Click `Manage deployments`.
-4. Click the pencil/edit icon.
-5. Choose `New version`.
-6. Click `Deploy`.
-
-That keeps the same URL but updates what it does.
-
-## Why Apps Script?
-
-Making a Google Sheet editable by anyone is enough for humans in the browser, but a static website still needs a simple URL it can call. The Apps Script web app is that bridge.
-
-This prototype uses JSONP so the static page can talk to Apps Script without dealing with CORS or authentication.
-
-Google's web app docs describe this deployment model here: https://developers.google.com/apps-script/guides/web
-
-## Security Note
-
-This is intentionally low-security and simple. Anyone with the deployed Apps Script URL can write to the Sheet. Because `config.js` is loaded by the browser, the Apps Script URL is visible to anyone who can view the site files. That is fine for a personal prototype, but not for sensitive data.
-
-Reset to default settings restores only preferences. It preserves workout logs, exercises and setup notes, added date columns, and the configured Sheet connection. It does not clear browser storage.
-
-Workout rows have a subtle trash icon at the far right. It asks to archive the named workout, then hides that row across dates while preserving all exercise data and logs. Undo is available immediately; Settings → Advanced settings → Archived workouts restores it later. Archived IDs are stored separately from preferences and survive resets, reloads, and Sheet snapshots. This first-stage feature is device-local and needs no Apps Script update; cross-device archiving is deferred to the backend upgrade.
+Google deployment instructions: https://developers.google.com/apps-script/guides/versions

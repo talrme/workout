@@ -7,10 +7,10 @@
   "theme_color": "#f4f7ef",
   "icons": [
     {
-      "src": "dumbbell.png",
+      "src": "dumbell-2.png?v=20261014",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

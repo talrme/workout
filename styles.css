@@ -984,3 +984,42 @@ button.primary {
   .detail-panel textarea { height: 58px; min-height: 42px; }
   .detail-actions button { font-size: 0.85rem; }
 }
+
+/* Keep table actions anchored to the page, independent of history scrolling. */
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #fff8df;
+  border-top: 2px solid var(--ink);
+}
+.table-actions .add-workout-button {
+  width: auto;
+  min-height: 42px;
+  justify-content: flex-start;
+}
+.history-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.history-actions button { font-size: 0.8rem; min-height: 38px; }
+.detail-actions { grid-template-columns: minmax(0, 1fr) auto auto; }
+.detail-actions .primary { min-height: 42px; }
+.detail-actions .detail-secondary {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 7px;
+  background: transparent;
+}
+.detail-secondary svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

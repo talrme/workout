@@ -22,12 +22,12 @@ This copy has a default Apps Script backend saved in `config.js`, so a fresh bro
 - A soft checkmark for quickly logging today's set at the previous weight
 - A green checked weight once today's set has been logged; tap the number to edit, or the separate checkmark to uncheck today
 - Subtle today's notes under logged values, with a local setting to hide them from the table
-- Compact machine details with today's weight and setup notes, an expandable More options section for today's note, and one row of Save/Remove/Close buttons
+- Compact machine details with today's weight and setup notes, an expandable More options section for today's note, and a prominent Save button and smaller, labeled Remove/Close icons
 - Clickable date headers for editing or deleting a whole workout day
 - Clickable previous-day values for editing or deleting one machine entry on that date
 - A small right-side `Add Day` button for adding a different date, such as yesterday
 - Gentle suggested workout highlighting when a machine has not been done in the last 3 workout days
-- A bottom `Add workout` row for adding a custom machine/exercise into Legs, Upper body, Core, Physical therapy, or Other
+- A left-aligned `Add workout` button below the scrolling table for adding a custom machine/exercise into Legs, Upper body, Core, Physical therapy, or Other
 - A home-screen icon via `dumbell-2.png` and `manifest.webmanifest`
 - Automatic Google Sheet sync on page open, when the page returns to the foreground, and for a short catch-up window after opening or saving
 
@@ -163,3 +163,5 @@ Google's web app docs describe this deployment model here: https://developers.go
 This is intentionally low-security and simple. Anyone with the deployed Apps Script URL can write to the Sheet. Because `config.js` is loaded by the browser, the Apps Script URL is visible to anyone who can view the site files. That is fine for a personal prototype, but not for sensitive data.
 
 Phone editing keeps the current scroll position when the workout and editor fit in the upper half of the screen. Otherwise it smoothly scrolls only as far as needed, accounting for keyboard space and respecting reduced-motion preferences. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.
+
+The table initially shows today and four previous workout dates. Older entries reveals five more dates per click; Recent only restores the initial view. History controls and Add workout remain outside horizontal table scrolling. Clicking outside an open editor saves and collapses it before handling another control, including another checkmark. Clicking the same workout heading closes its editor.

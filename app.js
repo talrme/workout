@@ -1,6 +1,7 @@
 const STORAGE_KEY = "workout-sheet-prototype-v2";
 const OLD_STORAGE_KEY = "workout-sheet-prototype-v1";
 const HISTORY_COLUMNS = 5;
+let historyColumns = HISTORY_COLUMNS;
 const DELETE_MARKER = "__WORKOUT_DELETE__";
 const GROUP_ORDER = ["Legs", "Upper body", "Core", "Physical therapy", "Other"];
 const SYNC_INTERVAL_MS = 15000;
@@ -137,8 +138,8 @@ function renderMachineTable() {
     rows.push(machineRow(machine, dates, suggestionInfo.suggestedIds));
     if (state.expandedId === machine.id) rows.push(detailRow(machine, dates.length + 2));
   });
-  rows.push(addWorkoutRow(dates.length + 2));
   els.machineTable.innerHTML = rows.join("");
+  renderTableActions();
 }
 
 function updateTableWidth(dateCount = displayDates().length) {
@@ -203,17 +204,14 @@ function todayNoteHtml(log) {
   return `<small class="today-note" title="${escapeHtml(note)}">${escapeHtml(note)}</small>`;
 }
 
-function addWorkoutRow(colspan) {
-  return `
-    <tr class="add-workout-row">
-      <td colspan="${colspan}">
-        <button type="button" class="add-workout-button" data-open-workout>
-          <span aria-hidden="true">+</span>
-          <strong>Add workout</strong>
-        </button>
-      </td>
-    </tr>
-  `;
+function renderTableActions() {
+  const hasOlder = historyDates().length > historyColumns - 1;
+  document.querySelector("[data-table-actions]").innerHTML = `
+    <button type="button" class="add-workout-button" data-open-workout><span aria-hidden="true">+</span> Add workout</button>
+    <div class="history-actions">
+      ${hasOlder ? '<button type="button" data-older-entries>Older entries <span aria-hidden="true">→</span></button>' : ''}
+      ${historyColumns > HISTORY_COLUMNS ? '<button type="button" data-recent-entries>Recent only</button>' : ''}
+    </div>`;
 }
 
 function detailRow(machine, colspan) {
@@ -243,8 +241,8 @@ function detailRow(machine, colspan) {
           </details>
           <div class="detail-actions">
             <button type="button" class="primary" data-save-detail="${escapeHtml(machine.id)}">Save</button>
-            ${todayLog ? `<button type="button" class="danger" data-remove-today="${escapeHtml(machine.id)}">Remove</button>` : ""}
-            <button type="button" data-close-detail>Close</button>
+            ${todayLog ? `<button type="button" class="danger detail-secondary" data-remove-today="${escapeHtml(machine.id)}" aria-label="Remove today's entry" title="Remove today's entry"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7" /></svg></button>` : ""}
+            <button type="button" class="detail-secondary" data-close-detail aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
           </div>
         </div>
       </td>
@@ -252,16 +250,18 @@ function detailRow(machine, colspan) {
   `;
 }
 
-function displayDates() {
+function historyDates() {
   const today = isoDate(new Date());
-  const unique = Array.from(new Set(state.logs
+  return Array.from(new Set(state.logs
     .filter((log) => String(log.weight || "").trim())
     .map((log) => normalizeDate(log.date))
     .filter((date) => date && dateHasVisibleLog(date))))
     .filter((date) => date !== today)
-    .sort((a, b) => b.localeCompare(a))
-    .slice(0, HISTORY_COLUMNS - 1);
-  return [today, ...unique];
+    .sort((a, b) => b.localeCompare(a));
+}
+
+function displayDates() {
+  return [isoDate(new Date()), ...historyDates().slice(0, historyColumns - 1)];
 }
 
 function latestLogFor(machineId, date) {
@@ -967,10 +967,24 @@ function bindEvents() {
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) syncAfterReturn();
   });
+  // Capture outside taps before delegated controls stop propagation.
   document.addEventListener("click", (event) => {
-    if (!state.expandedId) return;
-    if (event.target.closest("[data-detail-panel], .settings-modal, .date-modal, .workout-modal")) return;
+    if (!state.expandedId || event.target.closest("[data-detail-panel]")) return;
+    event.closedDetailId = state.expandedId;
     closeExpandedDetail();
+  }, true);
+
+  document.querySelector("[data-table-actions]").addEventListener("click", (event) => {
+    if (event.target.closest("[data-open-workout]")) openWorkoutModal();
+    if (event.target.closest("[data-older-entries]")) {
+      historyColumns += HISTORY_COLUMNS;
+      render();
+    }
+    if (event.target.closest("[data-recent-entries]")) {
+      historyColumns = HISTORY_COLUMNS;
+      document.querySelector(".table-scroll").scrollLeft = 0;
+      render();
+    }
   });
 
   els.tableHead.addEventListener("click", (event) => {
@@ -1040,14 +1054,14 @@ function bindEvents() {
     const expandButton = event.target.closest("[data-expand]");
     if (expandButton) {
       event.stopPropagation();
-      toggleMachine(expandButton.dataset.expand);
+      if (event.closedDetailId !== expandButton.dataset.expand) toggleMachine(expandButton.dataset.expand);
       return;
     }
 
     const row = event.target.closest("[data-machine-row]");
     if (row) {
       event.stopPropagation();
-      toggleMachine(row.dataset.machineRow);
+      if (event.closedDetailId !== row.dataset.machineRow) toggleMachine(row.dataset.machineRow);
     }
   });
 }

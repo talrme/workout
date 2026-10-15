@@ -31,10 +31,10 @@ The app shows:
 - A soft checkmark in today's column that repeats the previous logged weight
 - A green checked weight after today's set is logged; tap the number to edit, or the separate checkmark to uncheck today
 - Subtle today's notes under logged values, controlled by the browser-local `hideTodayNotes` setting
-- Compact accordion details with today's weight and setup notes, More options for today's note, and one row of Save/Remove/Close buttons
+- Compact accordion details with today's weight and setup notes, More options for today's note, and a prominent Save button and smaller, labeled Remove/Close icons
 - Date headers open a whole-day editor for all machine weights/notes on that date
 - A plus button beside `Today` opens the same editor on yesterday by default, and the user can change the date
-- A bottom `Add workout` row creates custom rows with a section, starting weight, and setup notes
+- A left-aligned `Add workout` button below the scrolling table creates custom rows with a section, starting weight, and setup notes
 - `dumbell-2.png` plus `manifest.webmanifest` provide the favicon and phone/home-screen icon
 
 The UI intentionally hides backend setup and does not show target effort, reps, or reps in reserve. Those older fields can remain in the backend schema for compatibility, but new UI writes only `weight` and `note` for workout logs. Plank duration is stored in the existing `weight` field as a display string such as `30s`, while the UI labels that row as `Time`.
@@ -138,3 +138,5 @@ If `backend.sample.gs` changes, the README should also mention redeploying via `
 This is intentionally simple and permissive for prototyping. Anyone with the Apps Script URL can write to the Sheet via the script. Do not use this for sensitive data without adding authentication or validation.
 
 Phone editing keeps the current scroll position when the workout and editor fit in the upper half of the screen. Otherwise it smoothly scrolls only as far as needed, accounting for keyboard space and respecting reduced-motion preferences. Weight inputs focus directly during the tap for iOS keyboard support. Checkmarks use centered SVGs rather than font glyphs. Close retains the existing save-on-close behavior.
+
+The table initially shows today and four previous workout dates. Older entries reveals five more dates per click; Recent only restores the initial view. History controls and Add workout remain outside horizontal table scrolling. Clicking outside an open editor saves and collapses it before handling another control, including another checkmark. Clicking the same workout heading closes its editor.

@@ -32,6 +32,11 @@ const server = http.createServer((req, res) => {
       });
       await page.goto(`http://127.0.0.1:${server.address().port}/`);
       await page.waitForFunction(() => backendReady && !flushingWrites && pendingWrites.length === 0);
+      assert.equal(await page.locator('[data-plan-workout]').count(), 0, 'Flags are hidden by default');
+      await page.locator('[data-open-settings]').click();
+      assert.equal(await page.locator('[data-show-planning-flags]').isChecked(), false);
+      await page.locator('[data-show-planning-flags]').check();
+      await page.locator('[data-save-settings]').click();
       const initialWrites = writes;
       const flag = page.locator('[data-plan-workout="leg-press"]');
       await flag.click();

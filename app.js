@@ -27,7 +27,7 @@ const DEFAULT_SETTINGS = {
     hideTodayNotes: false,
     showSetupNotes: true,
     highlightMissedWorkouts: true,
-    showPlanningFlags: true,
+    showPlanningFlags: false,
     theme: "garden"
   };
 

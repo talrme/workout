@@ -32,6 +32,8 @@ The first upgraded Tal sync also imports local-only exercises, missing logs, and
 
 ## Workout interface
 
+Local preview: tap the small flag beside an exercise to plan it for today. Blue overrides the yellow missed-workout suggestion; unflagging restores yellow if still applicable. Completing today's workout clears the plan and hides its flag button, including after completion syncs from another device. Undoing completion makes an empty flag available again. Settings → Show planning flags hides both flags and blue highlights; the preference persists locally. Plans do not log workouts or write to the Sheet, persist on this browser per profile, and reset on the next local calendar day. Missed-workout suggestions use the last three recorded workout dates, not three calendar days.
+
 - Centered title between two dumbbells; no visible machine-column label.
 - Today and four recent dates, with Show older entries at the far right.
 - Faint empty rings log the previous weight. Solid checkmarks uncheck today; numbers open the editor.

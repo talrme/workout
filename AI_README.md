@@ -20,6 +20,10 @@ On the first successful schema-2 Tal snapshot on a device, a durable outbox impo
 
 ## Product
 
+Local-only prototype: `workout-today-plan-v1` stores today's date and per-user exercise ID arrays, separate from the sync outbox and legacy storage. Flag buttons toggle a subtle blue row highlight without logging, backend writes, reordering, or full-table rerenders. Old-date plans are ignored. Preserve the separate missed-workout highlighting and explicit completion controls.
+
+`showPlanningFlags` is a device-local setting (default on). Hidden flags also hide the planning highlight without erasing uncompleted plans. Table rendering prunes completed IDs and omits flag controls for today's completed exercises; undoing completion does not restore an old plan. Blue planned rows override yellow suggestions, which are based on recorded workout dates, not calendar days.
+
 Shared profiles are not authenticated private accounts. User actions live in Advanced settings. Start empty is default; copying Tal clones active exercises only, with new IDs and no logs. Archive and restore both users and workouts; there is no permanent deletion. Theme/preferences are device-local, blank date columns are per-user device caches, and saved exercises/history/archive states sync. Preserve the compact editors, gentle keyboard-space scrolling, faint empty rings, and centered dumbbell header.
 
 ## Validation

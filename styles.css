@@ -366,6 +366,30 @@ button { cursor: pointer; color: inherit; }
   transform: none;
 }
 
+.machine-heading { display: flex; align-items: center; gap: 2px; }
+.machine-heading .machine-name { min-width: 0; flex: 1; }
+.plan-workout {
+  flex: 0 0 28px;
+  width: 28px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 23px;
+  opacity: 0.55;
+  box-shadow: none;
+}
+.plan-workout:hover, .plan-workout:focus-visible { opacity: 1; transform: none; box-shadow: none; }
+.plan-workout[aria-pressed="true"] { color: var(--blue); opacity: 1; }
+.machine-row.is-planned th, .machine-row.is-planned td {
+  background: color-mix(in srgb, var(--blue) 9%, var(--paper));
+}
+.machine-row.is-planned th { box-shadow: inset 3px 0 0 var(--blue); }
+.machine-row.is-planned.is-open th, .machine-row.is-planned.is-open td {
+  background: color-mix(in srgb, var(--blue) 12%, var(--paper));
+}
+
 .machine-name span {
   font-weight: 950;
   font-size: 1rem;

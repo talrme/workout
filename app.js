@@ -1,5 +1,6 @@
 const STORAGE_KEY = "workout-sheet-prototype-v2";
 const OLD_STORAGE_KEY = "workout-sheet-prototype-v1";
+const PLAN_STORAGE_KEY = "workout-today-plan-v1";
 const HISTORY_COLUMNS = 5;
 let historyColumns = HISTORY_COLUMNS;
 const DELETE_MARKER = "__WORKOUT_DELETE__";
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS = {
     hideTodayNotes: false,
     showSetupNotes: true,
     highlightMissedWorkouts: true,
+    showPlanningFlags: true,
     theme: "garden"
   };
 
@@ -70,6 +72,7 @@ const els = {
   showNotes: document.querySelector("[data-show-notes]"),
   showSetup: document.querySelector("[data-show-setup]"),
   highlightMissed: document.querySelector("[data-highlight-missed]"),
+  showPlanningFlags: document.querySelector("[data-show-planning-flags]"),
   settingsBackdrop: document.querySelector("[data-settings-backdrop]"),
   settingsModal: document.querySelector("[data-settings-modal]"),
   workoutBackdrop: document.querySelector("[data-workout-backdrop]"),
@@ -251,10 +254,12 @@ function renderSettings() {
   els.showNotes.checked = !state.settings.hideTodayNotes;
   els.showSetup.checked = state.settings.showSetupNotes;
   els.highlightMissed.checked = state.settings.highlightMissedWorkouts;
+  els.showPlanningFlags.checked = state.settings.showPlanningFlags;
   document.querySelectorAll("button[data-theme]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.theme === state.settings.theme)));
 }
 
 function renderMachineTable() {
+  clearCompletedPlans();
   const dates = displayDates();
   const today = isoDate(new Date());
   updateTableWidth(dates.length);
@@ -403,17 +408,56 @@ function checkmarkIcon() {
   return '<svg class="checkmark-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m5 12 4.5 4.5L19 7" /></svg>';
 }
 
+function todayPlan() {
+  try {
+    const plan = JSON.parse(localStorage.getItem(PLAN_STORAGE_KEY) || "{}");
+    return plan.date === isoDate(new Date()) && Array.isArray(plan.users?.[state.activeUserId])
+      ? plan.users[state.activeUserId] : [];
+  } catch { return []; }
+}
+
+function togglePlannedWorkout(machineId) {
+  let plan;
+  try { plan = JSON.parse(localStorage.getItem(PLAN_STORAGE_KEY) || "{}"); } catch { plan = {}; }
+  const date = isoDate(new Date());
+  if (!plan || plan.date !== date || !plan.users || typeof plan.users !== "object") plan = { date, users: {} };
+  const selected = new Set(todayPlan());
+  selected.has(machineId) ? selected.delete(machineId) : selected.add(machineId);
+  plan.users[state.activeUserId] = [...selected];
+  localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plan));
+  const row = document.querySelector(`[data-machine-row="${CSS.escape(machineId)}"]`);
+  row?.classList.toggle("is-planned", selected.has(machineId));
+  const button = row?.querySelector("[data-plan-workout]");
+  if (button) {
+    button.setAttribute("aria-pressed", String(selected.has(machineId)));
+    button.querySelector("span").textContent = selected.has(machineId) ? "⚑" : "⚐";
+  }
+}
+
+function clearCompletedPlans() {
+  const selected = todayPlan();
+  const remaining = selected.filter(id => !latestLogFor(id, isoDate(new Date())));
+  if (remaining.length === selected.length) return;
+  const plan = JSON.parse(localStorage.getItem(PLAN_STORAGE_KEY));
+  plan.users[state.activeUserId] = remaining;
+  localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plan));
+}
+
 function machineRow(machine, dates, suggestedIds = new Set()) {
   const today = isoDate(new Date());
+  const isPlanned = state.settings.showPlanningFlags && todayPlan().includes(machine.id);
   const isSuggested = suggestedIds.has(machine.id);
   const setupPreview = String(machine.setupNotes || "").trim();
   return `
-    <tr class="machine-row ${state.expandedId === machine.id ? "is-open" : ""} ${isSuggested ? "is-suggested" : ""}" data-machine-row="${escapeHtml(machine.id)}" ${isSuggested ? `title="${escapeHtml(machine.name)} has not been done in the last 3 workout days"` : ""}>
+    <tr class="machine-row ${state.expandedId === machine.id ? "is-open" : ""} ${isSuggested ? "is-suggested" : ""} ${isPlanned ? "is-planned" : ""}" data-machine-row="${escapeHtml(machine.id)}" ${isSuggested ? `title="${escapeHtml(machine.name)} has not been done in the last 3 workout days"` : ""}>
       <th scope="row">
+        <div class="machine-heading">
         <button type="button" class="machine-name" data-expand="${escapeHtml(machine.id)}" aria-expanded="${state.expandedId === machine.id}">
           <span>${escapeHtml(machine.name)}</span>
           ${setupPreview && state.settings.showSetupNotes ? `<small class="setup-preview" title="${escapeHtml(setupPreview)}">${escapeHtml(setupPreview)}</small>` : ""}
         </button>
+        ${state.settings.showPlanningFlags && !latestLogFor(machine.id, today) ? `<button type="button" class="plan-workout" data-plan-workout="${escapeHtml(machine.id)}" aria-label="Plan ${escapeHtml(machine.name)} for today" aria-pressed="${isPlanned}" title="Plan for today"><span aria-hidden="true">${isPlanned ? "⚑" : "⚐"}</span></button>` : ""}
+        </div>
       </th>
       ${dates.map((date) => {
         const log = latestLogFor(machine.id, date);
@@ -1152,6 +1196,7 @@ function saveSettings() {
   state.settings.hideTodayNotes = !els.showNotes.checked;
   state.settings.showSetupNotes = els.showSetup.checked;
   state.settings.highlightMissedWorkouts = els.highlightMissed.checked;
+  state.settings.showPlanningFlags = els.showPlanningFlags.checked;
   saveState();
   closeSettings();
   render();
@@ -1420,6 +1465,12 @@ function bindEvents() {
   });
 
   els.machineTable.addEventListener("click", (event) => {
+    const planButton = event.target.closest("[data-plan-workout]");
+    if (planButton) {
+      event.stopPropagation();
+      togglePlannedWorkout(planButton.dataset.planWorkout);
+      return;
+    }
     const archiveButton = event.target.closest("[data-archive-workout]");
     if (archiveButton) {
       event.stopPropagation();
